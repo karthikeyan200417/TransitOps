@@ -1,8 +1,5 @@
 """
 TransitOps Dashboard — FastAPI backend
-=======================================
-Run with:  uvicorn main:app --reload
-Then open: http://127.0.0.1:8000
 """
 
 from typing import Optional
