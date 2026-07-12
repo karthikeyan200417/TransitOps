@@ -10,58 +10,7 @@ The project features a **FastAPI** backend, a **PostgreSQL 17** database, and a 
 
 TransitOps is built on a decoupled, multi-service architecture:
 
-```text
-+--------------------------+
-| Vite + React Frontend    |
-| Port: 5173               |
-+------------+-------------+
-             |
-             ▼
-+--------------------------+
-| FastAPI Backend API      |
-| Port: 8000               |
-+------------+-------------+
-             |
-             ▼
-+--------------------------+
-| Alembic Migrations       |
-| & Database Seeding       |
-+------------+-------------+
-             |
-             ▼
-+--------------------------+
-| PostgreSQL 17            |
-| Port: 5432 (Container)   |
-| Port: 5433 (Host)        |
-+------------+-------------+
-             |
-             ▼
-+--------------------------+
-| postgres_data Volume     |
-| Persistent Storage       |
-+--------------------------+
-```
-
-## Components
-
-1. **Frontend (Vite/React)**
-   - Responsive dashboard for dispatchers, safety officers, and financial analysts.
-
-2. **Backend (FastAPI)**
-   - High-performance REST API
-   - OAuth2 JWT Authentication
-   - Role-Based Access Control (RBAC)
-   - Database connection pooling
-
-3. **Database (PostgreSQL 17)**
-   - Highly normalized relational schema
-   - Strict constraints
-   - Transaction safety
-   - Partial indexes to prevent double-bookings
-
-4. **Orchestration (Docker Compose)**
-   - Private Docker bridge network (`transitops-network`)
-   - Automated startup and health checks
+<img width="203" height="560" alt="image" src="https://github.com/user-attachments/assets/73ff7d31-ca0b-457c-a940-834fba07eda1" />
 
 ---
 
