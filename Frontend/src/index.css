@@ -7,8 +7,53 @@ html {
     min-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
+    background-color: #0b0b0f;
+    color: #ffffff;
 }
 
 * {
     box-sizing: border-box;
+}
+
+/* Glassmorphic Toast Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    animation: toast-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-content {
+    background: rgba(21, 21, 29, 0.7);
+    border: 1px solid rgba(255, 68, 68, 0.25);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    color: #ff6b6b;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+}
+
+.toast-content::before {
+    content: "⚠️";
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
 }

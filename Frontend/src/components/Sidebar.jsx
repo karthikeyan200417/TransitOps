@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
     MdDashboard, MdDirectionsBus, MdPeople, MdMap,
     MdBuild, MdLocalGasStation, MdBarChart, MdSettings,
     MdChevronLeft, MdChevronRight, MdMenu
 } from 'react-icons/md';
 import './Sidebar.css';
+import { AuthContext } from '../context/AuthContext';
+import { rolePermissions } from '../config/permissions';
 
-const navItems = [
+const allNavItems = [
     { icon: MdDashboard, label: 'Dashboard', id: 'dashboard' },
     { icon: MdDirectionsBus, label: 'Fleet', id: 'fleet' },
     { icon: MdPeople, label: 'Drivers', id: 'drivers' },
@@ -18,6 +20,15 @@ const navItems = [
 ];
 
 export default function Sidebar({ collapsed, setCollapsed, activeItem, setActiveItem }) {
+    const { user } = useContext(AuthContext);
+    const currentRole = user ? user.role : 'Dispatcher';
+    const permissions = rolePermissions[currentRole] || [];
+
+    const navItems = allNavItems.filter(item => {
+        if (item.id === 'settings') return true;
+        return permissions.includes(item.id.toLowerCase());
+    });
+
     return (
         <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-header">
