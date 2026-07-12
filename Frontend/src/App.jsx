@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import LoginPage from './LoginPage';
+import SignupPage from './SignupPage';
 import Dashboard from './pages/Dashboard';
 import FleetPage from './pages/FleetPage';
 import DriverManagement from './pages/DriverManagement';
@@ -70,6 +71,10 @@ function AppContent() {
                 <Route
                     path="/login"
                     element={user ? <Navigate to="/dashboard" replace /> : <LoginPage onLogin={handleLoginSuccess} />}
+                />
+                <Route
+                    path="/signup"
+                    element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
                 />
 
                 <Route

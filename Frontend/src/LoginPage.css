@@ -196,3 +196,48 @@ body {
 .secondary-btn:active {
     transform: translateY(1px);
 }
+
+/* Role selector */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.role-card {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #d1d5db;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.role-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--role-color);
+    color: #fff;
+}
+
+.role-card--active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--role-color);
+    color: #fff;
+    box-shadow: 0 0 0 1px var(--role-color), 0 0 10px color-mix(in srgb, var(--role-color) 30%, transparent);
+}
+
+.role-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}

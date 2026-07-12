@@ -52,20 +52,29 @@ def seed_database():
             role_map[r_name] = role.id
         print("Roles seeded.")
 
-        # 2. SEED DEFAULT USER (DISPATCHER)
-        dispatcher_email = "dispatcher@transitops.com"
-        hashed_pwd = pwd_context.hash("dispatcher123")
-        dispatcher = User(
-            email=dispatcher_email,
-            password_hash=hashed_pwd,
-            full_name="Alex Dispatcher",
-            role_id=role_map["DISPATCHER"],
-            is_active=True
-        )
-        db.add(dispatcher)
-        db.flush()
-        dispatcher_id = dispatcher.id
-        print(f"Default user seeded: {dispatcher_email}")
+        # 2. SEED ALL ROLE USERS
+        demo_users = [
+            ("admin@transitops.com",      "admin123",      "Admin User",       "ADMIN"),
+            ("fleet@transitops.com",       "fleet123",      "Fleet Manager",    "FLEET_MANAGER"),
+            ("dispatcher@transitops.com", "dispatcher123", "Alex Dispatcher",  "DISPATCHER"),
+            ("safety@transitops.com",     "safety123",     "Safety Officer",   "SAFETY_OFFICER"),
+            ("finance@transitops.com",    "finance123",    "Finance Analyst",  "FINANCIAL_ANALYST"),
+        ]
+        dispatcher_id = None
+        for email, pwd, name, role_name in demo_users:
+            u = User(
+                email=email,
+                password_hash=pwd_context.hash(pwd),
+                full_name=name,
+                role_id=role_map[role_name],
+                is_active=True
+            )
+            db.add(u)
+            db.flush()
+            if role_name == "DISPATCHER":
+                dispatcher_id = u.id
+            print(f"User seeded: {email}")
+        print("All demo users seeded.")
 
         # 3. SEED VEHICLES
         vehicle_map = {}

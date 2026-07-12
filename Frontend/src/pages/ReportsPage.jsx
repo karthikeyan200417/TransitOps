@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     MdTrendingUp, MdDirectionsBus, MdLocalGasStation,
     MdBuild, MdAttachMoney, MdCheckCircle, MdTimer, MdRefresh
 } from 'react-icons/md';
 import { analyticsApi } from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import './ReportsPage.css';
 
@@ -113,7 +114,17 @@ function StatCard({ title, value, sub, color, icon }) {
 
 const COLORS = ['#6D4AFF', '#4F8CFF', '#00D2A0', '#FF9F43', '#FF6B9D'];
 
+// Tabs visible per role
+const ROLE_TABS = {
+    ADMIN:             ['overview', 'fleet', 'trips', 'fuel', 'expenses', 'maintenance'],
+    FLEET_MANAGER:     ['overview', 'fleet', 'trips', 'fuel', 'expenses', 'maintenance'],
+    SAFETY_OFFICER:    ['overview', 'fleet', 'trips', 'maintenance'],
+    FINANCIAL_ANALYST: ['overview', 'trips', 'fuel', 'expenses'],
+};
+
 export default function ReportsPage({ onNavigate }) {
+    const { user } = useContext(AuthContext);
+    const allowedTabs = ROLE_TABS[user?.role] || ROLE_TABS.ADMIN;
     const [fleet, setFleet]       = useState(null);
     const [fuel, setFuel]         = useState(null);
     const [expenses, setExpenses] = useState(null);
@@ -125,11 +136,15 @@ export default function ReportsPage({ onNavigate }) {
     const load = async () => {
         setLoading(true);
         try {
+            const canFleet    = allowedTabs.includes('fleet');
+            const canFuel     = allowedTabs.includes('fuel');
+            const canExpenses = allowedTabs.includes('expenses');
+            const canMaint    = allowedTabs.includes('maintenance');
             const [f, fu, ex, m, t] = await Promise.all([
-                analyticsApi.fleetUtilization().catch(() => null),
-                analyticsApi.fuelEfficiency().catch(() => null),
-                analyticsApi.expenses().catch(() => null),
-                analyticsApi.maintenance().catch(() => null),
+                canFleet    ? analyticsApi.fleetUtilization().catch(() => null) : Promise.resolve(null),
+                canFuel     ? analyticsApi.fuelEfficiency().catch(() => null)   : Promise.resolve(null),
+                canExpenses ? analyticsApi.expenses().catch(() => null)         : Promise.resolve(null),
+                canMaint    ? analyticsApi.maintenance().catch(() => null)      : Promise.resolve(null),
                 analyticsApi.trips().catch(() => null),
             ]);
             setFleet(f); setFuel(fu); setExpenses(ex); setMaint(m); setTrips(t);
@@ -138,6 +153,11 @@ export default function ReportsPage({ onNavigate }) {
     };
 
     useEffect(() => { load(); }, []);
+
+    // Keep activeTab valid when role changes
+    useEffect(() => {
+        if (!allowedTabs.includes(activeTab)) setActiveTab(allowedTabs[0]);
+    }, [allowedTabs]);
 
     if (loading) return (
         <div className="reports-page">
@@ -189,8 +209,6 @@ export default function ReportsPage({ onNavigate }) {
 
     const maxTrips = topTripVehicles.length > 0 ? topTripVehicles[0].total_trips : 1;
 
-    const tabs = ['overview', 'fleet', 'trips', 'fuel', 'expenses', 'maintenance'];
-
     return (
         <div className="reports-page">
             <Navbar onNavigate={onNavigate} />
@@ -207,7 +225,7 @@ export default function ReportsPage({ onNavigate }) {
 
                 {/* Tabs */}
                 <div className="tab-bar" style={{ marginBottom: 24 }}>
-                    {tabs.map(t => (
+                    {allowedTabs.map(t => (
                         <button key={t} className={`tab-btn ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
                             {t.charAt(0).toUpperCase() + t.slice(1)}
                         </button>

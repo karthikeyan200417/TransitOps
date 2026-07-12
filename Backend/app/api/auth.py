@@ -3,10 +3,15 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_token
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserProfile
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserProfile
 from app.services import auth_service
 
 router = APIRouter()
+
+
+@router.post("/register", response_model=UserProfile, status_code=201, summary="Register a new user")
+def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    return auth_service.register(payload, db)
 
 
 @router.post("/login", response_model=TokenResponse, summary="Login and receive JWT token")
