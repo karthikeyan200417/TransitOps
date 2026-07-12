@@ -2,6 +2,13 @@ from pydantic import BaseModel, EmailStr
 import uuid
 
 
+class RegisterRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+    role: str  # e.g. "ADMIN", "DISPATCHER", etc.
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str

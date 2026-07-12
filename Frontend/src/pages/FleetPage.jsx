@@ -19,7 +19,6 @@ const sortOptions   = [
     { value: 'status',   label: 'By Status' },
 ];
 
-// Map backend vehicle fields to UI-friendly shape
 function toUI(v) {
     return {
         id: v.id,
@@ -30,26 +29,30 @@ function toUI(v) {
         capacity: parseFloat(v.capacity_kg),
         odometer: parseFloat(v.odometer),
         acquisitionCost: parseFloat(v.acquisition_cost),
-        status: v.status.charAt(0) + v.status.slice(1).toLowerCase().replace('_', ' '),
-        rawStatus: v.status,
+        status: v.status,
         fuelType: 'Diesel',
         purchaseDate: '', color: '', insuranceNumber: '',
         insuranceExpiry: '', registrationExpiry: '', notes: '',
     };
 }
 
+function toDisplay(status) {
+    return status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' ');
+}
+
 /* ─── Status Badge ─── */
 function StatusBadge({ status }) {
+    const display = toDisplay(status);
     const cfg = {
-        Available: { color: '#00D2A0', bg: 'rgba(0,210,160,0.1)', icon: <MdCheckCircle /> },
-        'On Trip': { color: '#4F8CFF', bg: 'rgba(79,140,255,0.1)', icon: <MdLocalShipping /> },
-        'In Shop': { color: '#FF9F43', bg: 'rgba(255,159,67,0.1)', icon: <MdBuild /> },
-        Retired: { color: '#FF6B9D', bg: 'rgba(255,107,157,0.1)', icon: <MdBlock /> },
+        AVAILABLE: { color: '#00D2A0', bg: 'rgba(0,210,160,0.1)', icon: <MdCheckCircle /> },
+        ON_TRIP:   { color: '#4F8CFF', bg: 'rgba(79,140,255,0.1)', icon: <MdLocalShipping /> },
+        IN_SHOP:   { color: '#FF9F43', bg: 'rgba(255,159,67,0.1)', icon: <MdBuild /> },
+        RETIRED:   { color: '#FF6B9D', bg: 'rgba(255,107,157,0.1)', icon: <MdBlock /> },
     };
-    const s = cfg[status] || cfg.Available;
+    const s = cfg[status] || cfg.AVAILABLE;
     return (
         <span className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.color}33` }}>
-            {s.icon} {status}
+            {s.icon} {display}
         </span>
     );
 }
@@ -57,16 +60,16 @@ function StatusBadge({ status }) {
 /* ─── Stat Cards ─── */
 function StatCards({ vehicles }) {
     const counts = {
-        total: vehicles.length,
-        available: vehicles.filter(v => v.status === 'Available').length,
-        onTrip: vehicles.filter(v => v.status === 'On Trip').length,
-        inShop: vehicles.filter(v => v.status === 'In Shop').length,
+        total:     vehicles.length,
+        available: vehicles.filter(v => v.status === 'AVAILABLE').length,
+        onTrip:    vehicles.filter(v => v.status === 'ON_TRIP').length,
+        inShop:    vehicles.filter(v => v.status === 'IN_SHOP').length,
     };
     const cards = [
-        { label: 'Total Vehicles', value: counts.total, color: '#6D4AFF', icon: <MdLocalShipping /> },
-        { label: 'Available', value: counts.available, color: '#00D2A0', icon: <MdCheckCircle /> },
-        { label: 'On Trip', value: counts.onTrip, color: '#4F8CFF', icon: <MdDirectionsBus /> },
-        { label: 'In Maintenance', value: counts.inShop, color: '#FF9F43', icon: <MdBuild /> },
+        { label: 'Total Vehicles', value: counts.total,     color: '#6D4AFF', icon: <MdLocalShipping /> },
+        { label: 'Available',      value: counts.available, color: '#00D2A0', icon: <MdCheckCircle /> },
+        { label: 'On Trip',        value: counts.onTrip,    color: '#4F8CFF', icon: <MdDirectionsBus /> },
+        { label: 'In Maintenance', value: counts.inShop,    color: '#FF9F43', icon: <MdBuild /> },
     ];
     return (
         <div className="fleet-stat-cards">
@@ -122,12 +125,6 @@ function ViewModal({ vehicle, onClose }) {
         ['Max Capacity', `${vehicle.capacity.toLocaleString()} kg`],
         ['Odometer', `${vehicle.odometer.toLocaleString()} km`],
         ['Acquisition Cost', `₹${vehicle.acquisitionCost.toLocaleString()}`],
-        ['Purchase Date', vehicle.purchaseDate],
-        ['Color', vehicle.color],
-        ['Fuel Type', vehicle.fuelType],
-        ['Insurance #', vehicle.insuranceNumber],
-        ['Insurance Expiry', vehicle.insuranceExpiry],
-        ['Reg. Expiry', vehicle.registrationExpiry],
         ['Status', vehicle.status],
         ['Notes', vehicle.notes || '—'],
     ];
@@ -159,8 +156,23 @@ const EMPTY_FORM = {
     regNumber: '', vehicleName: '', model: '', vehicleType: 'Van',
     capacity: '', odometer: '', acquisitionCost: '', purchaseDate: '',
     color: '', fuelType: 'Diesel', insuranceNumber: '', insuranceExpiry: '',
-    registrationExpiry: '', status: 'Available', notes: '',
+    registrationExpiry: '', status: 'AVAILABLE', notes: '',
 };
+
+function VehicleField({ label, field, type, opts, value, onChange }) {
+    return (
+        <div className="form-field">
+            <label>{label}</label>
+            {opts ? (
+                <select value={value} onChange={e => onChange(field, e.target.value)}>
+                    {opts.map(o => <option key={o}>{o}</option>)}
+                </select>
+            ) : (
+                <input type={type || 'text'} value={value} onChange={e => onChange(field, e.target.value)} />
+            )}
+        </div>
+    );
+}
 
 function VehicleModal({ initial, onSave, onClose }) {
     const [form, setForm] = useState(initial || EMPTY_FORM);
@@ -173,19 +185,6 @@ function VehicleModal({ initial, onSave, onClose }) {
         onSave(form);
     };
 
-    const Field = ({ label, field, type = 'text', opts }) => (
-        <div className="form-field">
-            <label>{label}</label>
-            {opts ? (
-                <select value={form[field]} onChange={e => set(field, e.target.value)}>
-                    {opts.map(o => <option key={o}>{o}</option>)}
-                </select>
-            ) : (
-                <input type={type} value={form[field]} onChange={e => set(field, e.target.value)} />
-            )}
-        </div>
-    );
-
     return (
         <div className="modal-backdrop" onClick={onClose}>
             <div className="modal-box modal-large" onClick={e => e.stopPropagation()}>
@@ -197,20 +196,20 @@ function VehicleModal({ initial, onSave, onClose }) {
                     <button className="modal-close" onClick={onClose}><MdClose /></button>
                 </div>
                 <div className="form-grid">
-                    <Field label="Registration Number *" field="regNumber" />
-                    <Field label="Vehicle Name *" field="vehicleName" />
-                    <Field label="Vehicle Model" field="model" />
-                    <Field label="Vehicle Type" field="vehicleType" opts={vehicleTypes.slice(1)} />
-                    <Field label="Max Load Capacity (kg)" field="capacity" type="number" />
-                    <Field label="Current Odometer (km)" field="odometer" type="number" />
-                    <Field label="Acquisition Cost (₹)" field="acquisitionCost" type="number" />
-                    <Field label="Purchase Date" field="purchaseDate" type="date" />
-                    <Field label="Vehicle Color" field="color" />
-                    <Field label="Fuel Type" field="fuelType" opts={fuelTypes} />
-                    <Field label="Insurance Number" field="insuranceNumber" />
-                    <Field label="Insurance Expiry" field="insuranceExpiry" type="date" />
-                    <Field label="Registration Expiry" field="registrationExpiry" type="date" />
-                    <Field label="Current Status" field="status" opts={statusOptions.slice(1)} />
+                    <VehicleField label="Registration Number *" field="regNumber" value={form.regNumber} onChange={set} />
+                    <VehicleField label="Vehicle Name *" field="vehicleName" value={form.vehicleName} onChange={set} />
+                    <VehicleField label="Vehicle Model" field="model" value={form.model} onChange={set} />
+                    <VehicleField label="Vehicle Type" field="vehicleType" opts={vehicleTypes.slice(1)} value={form.vehicleType} onChange={set} />
+                    <VehicleField label="Max Load Capacity (kg)" field="capacity" type="number" value={form.capacity} onChange={set} />
+                    <VehicleField label="Current Odometer (km)" field="odometer" type="number" value={form.odometer} onChange={set} />
+                    <VehicleField label="Acquisition Cost (₹)" field="acquisitionCost" type="number" value={form.acquisitionCost} onChange={set} />
+                    <VehicleField label="Purchase Date" field="purchaseDate" type="date" value={form.purchaseDate} onChange={set} />
+                    <VehicleField label="Vehicle Color" field="color" value={form.color} onChange={set} />
+                    <VehicleField label="Fuel Type" field="fuelType" opts={fuelTypes} value={form.fuelType} onChange={set} />
+                    <VehicleField label="Insurance Number" field="insuranceNumber" value={form.insuranceNumber} onChange={set} />
+                    <VehicleField label="Insurance Expiry" field="insuranceExpiry" type="date" value={form.insuranceExpiry} onChange={set} />
+                    <VehicleField label="Registration Expiry" field="registrationExpiry" type="date" value={form.registrationExpiry} onChange={set} />
+                    <VehicleField label="Current Status" field="status" opts={statusOptions.slice(1)} value={form.status} onChange={set} />
                     <div className="form-field form-full">
                         <label>Notes</label>
                         <textarea rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} />
@@ -243,15 +242,15 @@ export default function FleetPage() {
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading]   = useState(true);
     const [apiError, setApiError] = useState(null);
-    const [search, setSearch]       = useState('');
+    const [search, setSearch]             = useState('');
     const [typeFilter, setTypeFilter]     = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
     const [page, setPage]     = useState(1);
 
-    const [showAdd, setShowAdd]         = useState(false);
-    const [editVehicle, setEditVehicle] = useState(null);
-    const [viewVehicle, setViewVehicle] = useState(null);
+    const [showAdd, setShowAdd]             = useState(false);
+    const [editVehicle, setEditVehicle]     = useState(null);
+    const [viewVehicle, setViewVehicle]     = useState(null);
     const [deleteVehicle, setDeleteVehicle] = useState(null);
 
     const fetchVehicles = async () => {
@@ -264,12 +263,11 @@ export default function FleetPage() {
     };
     useEffect(() => { fetchVehicles(); }, []);
 
-    /* Filter + Sort */
     const filtered = useMemo(() => {
         let list = vehicles.filter(v => {
             const matchSearch = !search || v.regNumber.toLowerCase().includes(search.toLowerCase()) || v.vehicleName.toLowerCase().includes(search.toLowerCase());
             const matchType   = typeFilter === 'All' || v.vehicleType === typeFilter;
-            const matchStatus = statusFilter === 'All' || v.rawStatus === statusFilter;
+            const matchStatus = statusFilter === 'All' || v.status === statusFilter;
             return matchSearch && matchType && matchStatus;
         });
         switch (sortBy) {
@@ -285,7 +283,6 @@ export default function FleetPage() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    /* Actions */
     const handleAdd = async (form) => {
         try {
             await vehiclesApi.create({
@@ -329,8 +326,8 @@ export default function FleetPage() {
     const handleRefresh = () => { fetchVehicles(); setSearch(''); setTypeFilter('All'); setStatusFilter('All'); setSortBy('newest'); setPage(1); };
 
     const handleExport = () => {
-        const headers = ['Reg#', 'Name', 'Model', 'Type', 'Capacity', 'Odometer', 'Cost', 'Purchase Date', 'Color', 'Fuel', 'Insurance#', 'Ins. Expiry', 'Reg. Expiry', 'Status', 'Notes'];
-        const rows = filtered.map(v => [v.regNumber, v.vehicleName, v.model, v.vehicleType, v.capacity, v.odometer, v.acquisitionCost, v.purchaseDate, v.color, v.fuelType, v.insuranceNumber, v.insuranceExpiry, v.registrationExpiry, v.status, v.notes]);
+        const headers = ['Reg#', 'Name', 'Type', 'Capacity', 'Odometer', 'Cost', 'Status'];
+        const rows = filtered.map(v => [v.regNumber, v.vehicleName, v.vehicleType, v.capacity, v.odometer, v.acquisitionCost, v.status]);
         const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
         const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'fleet_export.csv'; a.click();
     };
@@ -342,7 +339,6 @@ export default function FleetPage() {
             <Navbar />
             <div className="fleet-content">
 
-                {/* Page Header */}
                 <div className="fleet-header">
                     <div>
                         <h1 className="fleet-title">Fleet Management</h1>
@@ -353,10 +349,8 @@ export default function FleetPage() {
                     </button>
                 </div>
 
-                {/* Stat Cards */}
                 <StatCards vehicles={vehicles} />
 
-                {/* Toolbar */}
                 <div className="fleet-toolbar">
                     <div className="toolbar-left">
                         <div className="search-wrap">
@@ -387,12 +381,11 @@ export default function FleetPage() {
                         </div>
                     </div>
                     <div className="toolbar-right">
-                        <button className="btn-icon" title="Refresh filters" onClick={handleRefresh}><MdRefresh /></button>
+                        <button className="btn-icon" title="Refresh" onClick={handleRefresh}><MdRefresh /></button>
                         <button className="btn-icon" title="Export CSV" onClick={handleExport}><MdDownload /></button>
                     </div>
                 </div>
 
-                {/* Table */}
                 {paginated.length === 0 ? (
                     <EmptyState onAdd={() => setShowAdd(true)} />
                 ) : (
@@ -451,7 +444,6 @@ export default function FleetPage() {
                 )}
             </div>
 
-            {/* Modals */}
             {showAdd && <VehicleModal onSave={handleAdd} onClose={() => setShowAdd(false)} />}
             {editVehicle && <VehicleModal initial={editVehicle} onSave={handleEdit} onClose={() => setEditVehicle(null)} />}
             {viewVehicle && <ViewModal vehicle={viewVehicle} onClose={() => setViewVehicle(null)} />}

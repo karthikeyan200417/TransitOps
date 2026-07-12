@@ -1,8 +1,31 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserProfile
-from app.core.security import verify_password, create_access_token, blacklist_token
+from app.models.user import User, Role
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserProfile
+from app.core.security import verify_password, hash_password, create_access_token, blacklist_token
+
+VALID_ROLES = {"ADMIN", "FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"}
+
+
+def register(payload: RegisterRequest, db: Session) -> UserProfile:
+    if payload.role.upper() not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Choose from: {', '.join(sorted(VALID_ROLES))}")
+    if db.query(User).filter(User.email == payload.email).first():
+        raise HTTPException(status_code=409, detail="Email already registered.")
+    role = db.query(Role).filter(Role.name == payload.role.upper()).first()
+    if not role:
+        raise HTTPException(status_code=400, detail="Role not found. Run database seed first.")
+    user = User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        full_name=payload.full_name,
+        role_id=role.id,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return UserProfile.model_validate(user)
 
 
 def login(payload: LoginRequest, db: Session) -> TokenResponse:
