@@ -1,81 +1,49 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdSearch, MdFilterList, MdRefresh, MdAdd, MdClose, MdLocalGasStation,
-    MdAttachMoney, MdDirectionsBus, MdPerson, MdCalendarToday, MdShield,
-    MdConfirmationNumber, MdReceipt, MdDelete
+    MdAttachMoney, MdPerson, MdReceipt, MdDelete
 } from 'react-icons/md';
 import { fuelApi, expensesApi, vehiclesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './FuelExpenses.css';
 
-const expenseCategories  = ['All', 'FUEL', 'TOLL', 'REPAIR', 'INSURANCE', 'SALARY', 'PARKING', 'OTHER'];
-const expenseStatuses    = ['All', 'PENDING', 'APPROVED', 'REJECTED'];
-const fuelStationsList   = ['All'];
-const expenseApprovedList = [];
+const expenseTypes = ['FUEL', 'MAINTENANCE', 'TOLL', 'PARKING', 'OTHER'];
 
 function fuelToUI(f) {
     return {
         id: f.id,
-        vehicle: f.vehicle?.registration_number || f.vehicle_id,
         vehicleId: f.vehicle_id,
-        driver: f.driver_id || '—',
-        litres: parseFloat(f.quantity_litres),
-        cost: parseFloat(f.total_cost),
-        pricePerLitre: parseFloat(f.price_per_litre),
-        fuelStation: f.station_name || 'N/A',
-        date: f.fill_date,
-        odometer: parseFloat(f.odometer_reading),
-        receiptNumber: f.receipt_number || '',
+        vehicle: f.vehicle_id,
+        liters: parseFloat(f.liters),
+        cost: parseFloat(f.cost),
+        odometer: parseFloat(f.odometer),
+        date: f.date,
     };
 }
 
 function expenseToUI(e) {
     return {
         id: e.id,
-        vehicle: e.vehicle?.registration_number || e.vehicle_id || '—',
         vehicleId: e.vehicle_id,
-        description: e.description,
-        expenseType: e.expense_type,
+        vehicle: e.vehicle_id,
+        tripId: e.trip_id,
         amount: parseFloat(e.amount),
-        date: e.expense_date,
-        status: e.status.charAt(0) + e.status.slice(1).toLowerCase(),
-        rawStatus: e.status,
-        approvedBy: e.approved_by || '',
-        receiptNumber: e.receipt_number || '',
+        type: e.type,
+        date: e.date,
     };
 }
 
-
-/* ─── Expense Status Badge ─── */
-function StatusBadge({ status }) {
-    const cfg = {
-        Approved: { color: '#00D2A0', bg: 'rgba(0, 210, 160, 0.1)' },
-        Pending: { color: '#FF9F43', bg: 'rgba(255, 159, 67, 0.1)' },
-        Rejected: { color: '#FF6B6B', bg: 'rgba(255, 107, 107, 0.1)' }
-    };
-    const s = cfg[status] || cfg.Pending;
-    return (
-        <span className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.color}25` }}>
-            {status}
-        </span>
-    );
-}
-
-/* ─── Add Fuel Log Modal Form ─── */
-const DEFAULT_FUEL = {
-    vehicle: '', driver: '', fuelStation: 'Indian Oil (Highway Ext)',
-    litres: '', cost: '', odometer: '', date: '', notes: ''
-};
-
-function AddFuelModal({ onSave, onClose }) {
-    const [form, setForm] = useState(DEFAULT_FUEL);
-
-    const setField = (field, val) => setForm(f => ({ ...f, [field]: val }));
+/* ─── Add Fuel Log Modal ─── */
+function AddFuelModal({ vehicles, onSave, onClose }) {
+    const [form, setForm] = useState({
+        vehicle_id: '', date: '', liters: '', cost: '', odometer: ''
+    });
+    const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!form.vehicle || !form.driver || !form.litres || !form.cost) {
-            alert('Please fill out Vehicle, Driver, Litres refueled and total Cost.');
+        if (!form.vehicle_id || !form.liters || !form.cost || !form.date) {
+            alert('Please fill Vehicle, Date, Litres and Cost.');
             return;
         }
         onSave(form);
@@ -87,55 +55,36 @@ function AddFuelModal({ onSave, onClose }) {
                 <div className="modal-header">
                     <div>
                         <h2>Log Fuel Refilling</h2>
-                        <p className="modal-sub">Log litres, odometer metrics, and station invoices.</p>
+                        <p className="modal-sub">Record litres, cost and odometer reading.</p>
                     </div>
                     <button className="modal-close" onClick={onClose}><MdClose /></button>
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                         <div className="form-field">
-                            <label>Select Vehicle HMV *</label>
-                            <select value={form.vehicle} onChange={e => setField('vehicle', e.target.value)} required>
-                                <option value="">-- Choose HMV --</option>
-                                {mockVehicles.map(v => (
-                                    <option key={v.id} value={v.regNumber}>{v.regNumber}</option>
+                            <label>Vehicle *</label>
+                            <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} required>
+                                <option value="">-- Choose Vehicle --</option>
+                                {vehicles.map(v => (
+                                    <option key={v.id} value={v.id}>{v.registration_number} ({v.name_model})</option>
                                 ))}
                             </select>
                         </div>
                         <div className="form-field">
-                            <label>Select Driver *</label>
-                            <select value={form.driver} onChange={e => setField('driver', e.target.value)} required>
-                                <option value="">-- Choose Operator --</option>
-                                {mockDrivers.map(d => (
-                                    <option key={d.id} value={d.name}>{d.name}</option>
-                                ))}
-                            </select>
+                            <label>Date *</label>
+                            <input type="date" value={form.date} onChange={e => set('date', e.target.value)} required />
                         </div>
                         <div className="form-field">
-                            <label>Litres Refuelled *</label>
-                            <input type="number" step="0.01" value={form.litres} onChange={e => setField('litres', parseFloat(e.target.value) || '')} required />
+                            <label>Litres *</label>
+                            <input type="number" step="0.01" value={form.liters} onChange={e => set('liters', e.target.value)} required />
                         </div>
                         <div className="form-field">
-                            <label>Cost Incurred (INR) *</label>
-                            <input type="number" value={form.cost} onChange={e => setField('cost', parseInt(e.target.value) || '')} required />
+                            <label>Cost (₹) *</label>
+                            <input type="number" step="0.01" value={form.cost} onChange={e => set('cost', e.target.value)} required />
                         </div>
                         <div className="form-field">
-                            <label>Odometer Reading (km)</label>
-                            <input type="number" value={form.odometer} onChange={e => setField('odometer', parseInt(e.target.value) || '')} />
-                        </div>
-                        <div className="form-field">
-                            <label>Fuel Station</label>
-                            <select value={form.fuelStation} onChange={e => setField('fuelStation', e.target.value)}>
-                                {fuelStationsList.map(station => <option key={station} value={station}>{station}</option>)}
-                            </select>
-                        </div>
-                        <div className="form-field">
-                            <label>Refuel Date</label>
-                            <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} />
-                        </div>
-                        <div className="form-field form-full">
-                            <label>Notes / Receipt Invoice Number</label>
-                            <input type="text" value={form.notes} onChange={e => setField('notes', e.target.value)} />
+                            <label>Odometer (km)</label>
+                            <input type="number" step="0.01" value={form.odometer} onChange={e => set('odometer', e.target.value)} />
                         </div>
                     </div>
                     <div className="modal-footer">
@@ -148,21 +97,17 @@ function AddFuelModal({ onSave, onClose }) {
     );
 }
 
-/* ─── Add Expense Modal Form ─── */
-const DEFAULT_EXPENSE = {
-    expenseType: 'Toll Charges', vehicle: '', amount: '', date: '',
-    approvedBy: 'Raven K. (Dispatcher)', status: 'Pending', description: '', receiptUrl: ''
-};
-
-function AddExpenseModal({ onSave, onClose }) {
-    const [form, setForm] = useState(DEFAULT_EXPENSE);
-
-    const setField = (field, val) => setForm(f => ({ ...f, [field]: val }));
+/* ─── Add Expense Modal ─── */
+function AddExpenseModal({ vehicles, onSave, onClose }) {
+    const [form, setForm] = useState({
+        vehicle_id: '', trip_id: '', amount: '', type: 'TOLL', date: ''
+    });
+    const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!form.vehicle || !form.amount || !form.description) {
-            alert('Please fill out Vehicle, Expense Amount and description of cost.');
+        if (!form.vehicle_id || !form.amount || !form.date) {
+            alert('Please fill Vehicle, Amount and Date.');
             return;
         }
         onSave(form);
@@ -174,53 +119,39 @@ function AddExpenseModal({ onSave, onClose }) {
                 <div className="modal-header">
                     <div>
                         <h2>Log Fleet Expense</h2>
-                        <p className="modal-sub">Record tolls, insurance, driver allowances, and parts invoices.</p>
+                        <p className="modal-sub">Record tolls, maintenance, parking and other costs.</p>
                     </div>
                     <button className="modal-close" onClick={onClose}><MdClose /></button>
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                         <div className="form-field">
-                            <label>Expense Category *</label>
-                            <select value={form.expenseType} onChange={e => setField('expenseType', e.target.value)}>
-                                {expenseCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                        <div className="form-field">
-                            <label>Select Vehicle HMV *</label>
-                            <select value={form.vehicle} onChange={e => setField('vehicle', e.target.value)} required>
-                                <option value="">-- Choose HMV --</option>
-                                {mockVehicles.map(v => (
-                                    <option key={v.id} value={v.regNumber}>{v.regNumber}</option>
+                            <label>Vehicle *</label>
+                            <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} required>
+                                <option value="">-- Choose Vehicle --</option>
+                                {vehicles.map(v => (
+                                    <option key={v.id} value={v.id}>{v.registration_number} ({v.name_model})</option>
                                 ))}
                             </select>
                         </div>
                         <div className="form-field">
-                            <label>Amount Spent (INR) *</label>
-                            <input type="number" value={form.amount} onChange={e => setField('amount', parseInt(e.target.value) || '')} required />
-                        </div>
-                        <div className="form-field">
-                            <label>Authorizing Personnel</label>
-                            <select value={form.approvedBy} onChange={e => setField('approvedBy', e.target.value)}>
-                                {expenseApprovedList.map(app => <option key={app} value={app}>{app}</option>)}
+                            <label>Expense Type</label>
+                            <select value={form.type} onChange={e => set('type', e.target.value)}>
+                                {expenseTypes.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                         <div className="form-field">
-                            <label>Expense Date</label>
-                            <input type="date" value={form.date} onChange={e => setField('date', e.target.value)} />
+                            <label>Amount (₹) *</label>
+                            <input type="number" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} required />
                         </div>
                         <div className="form-field">
-                            <label>Receipt Attachment Mockup</label>
-                            <input type="text" placeholder="e.g. invoice_scan_78.pdf" value={form.receiptUrl} onChange={e => setField('receiptUrl', e.target.value)} />
-                        </div>
-                        <div className="form-field form-full">
-                            <label>Expense Description / Justification *</label>
-                            <textarea rows={2} value={form.description} onChange={e => setField('description', e.target.value)} required />
+                            <label>Date *</label>
+                            <input type="date" value={form.date} onChange={e => set('date', e.target.value)} required />
                         </div>
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="btn-primary">Save Expense Log</button>
+                        <button type="submit" className="btn-primary">Save Expense</button>
                     </div>
                 </form>
             </div>
@@ -230,220 +161,188 @@ function AddExpenseModal({ onSave, onClose }) {
 
 export default function FuelExpenses({ onNavigate }) {
     const [activeTab, setActiveTab] = useState('Fuel Logs');
-
     const [fuelLogs, setFuelLogs]   = useState([]);
     const [expenses, setExpenses]   = useState([]);
+    const [vehicles, setVehicles]   = useState([]);
     const [loading, setLoading]     = useState(true);
-
-    const [search, setSearch]               = useState('');
-    const [stationFilter, setStationFilter] = useState('All');
-    const [expenseTypeFilter, setExpenseTypeFilter] = useState('All');
-
+    const [search, setSearch]       = useState('');
+    const [typeFilter, setTypeFilter] = useState('All');
     const [fuelModalOpen, setFuelModalOpen]       = useState(false);
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [fl, ex] = await Promise.all([fuelApi.list(), expensesApi.list()]);
+            const [fl, ex, vl] = await Promise.all([fuelApi.list(), expensesApi.list(), vehiclesApi.list()]);
             setFuelLogs(fl.map(fuelToUI));
             setExpenses(ex.map(expenseToUI));
+            setVehicles(vl);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
     useEffect(() => { fetchData(); }, []);
 
+    // Build vehicle lookup map for display
+    const vehicleMap = useMemo(() => {
+        const m = {};
+        vehicles.forEach(v => { m[v.id] = v.registration_number; });
+        return m;
+    }, [vehicles]);
+
     const fuelStats = useMemo(() => ({
-        totalLitres:    fuelLogs.reduce((s, f) => s + f.litres, 0),
-        totalCost:      fuelLogs.reduce((s, f) => s + f.cost, 0),
-        avgCostPerLitre: fuelLogs.length > 0
-            ? (fuelLogs.reduce((s, f) => s + f.cost, 0) / fuelLogs.reduce((s, f) => s + f.litres, 0)).toFixed(2)
+        totalLiters: fuelLogs.reduce((s, f) => s + f.liters, 0).toFixed(1),
+        totalCost:   fuelLogs.reduce((s, f) => s + f.cost, 0),
+        avgCost:     fuelLogs.length > 0
+            ? (fuelLogs.reduce((s, f) => s + f.cost, 0) / fuelLogs.reduce((s, f) => s + f.liters, 0)).toFixed(2)
             : 0,
-        refuelsCount:   fuelLogs.length,
+        count: fuelLogs.length,
     }), [fuelLogs]);
 
     const expenseStats = useMemo(() => ({
-        totalSpent: expenses.reduce((s, e) => s + e.amount, 0),
-        approved:   expenses.filter(e => e.rawStatus === 'APPROVED').length,
-        pending:    expenses.filter(e => e.rawStatus === 'PENDING').length,
-        toll:       expenses.filter(e => e.expenseType === 'TOLL').reduce((s, e) => s + e.amount, 0),
-        insurance:  expenses.filter(e => e.expenseType === 'INSURANCE').reduce((s, e) => s + e.amount, 0),
+        total: expenses.reduce((s, e) => s + e.amount, 0),
+        toll:  expenses.filter(e => e.type === 'TOLL').reduce((s, e) => s + e.amount, 0),
+        maint: expenses.filter(e => e.type === 'MAINTENANCE').reduce((s, e) => s + e.amount, 0),
+        count: expenses.length,
     }), [expenses]);
 
-    const handleAddFuel = async (entry) => {
+    const handleAddFuel = async (form) => {
         try {
             await fuelApi.create({
-                vehicle_id: entry.vehicleId,
-                quantity_litres: parseFloat(entry.litres),
-                price_per_litre: parseFloat(entry.pricePerLitre),
-                total_cost: parseFloat(entry.cost),
-                station_name: entry.fuelStation,
-                fill_date: entry.date,
-                odometer_reading: parseFloat(entry.odometer) || 0,
-                receipt_number: entry.receiptNumber,
+                vehicle_id: form.vehicle_id,
+                date: form.date,
+                liters: parseFloat(form.liters),
+                cost: parseFloat(form.cost),
+                odometer: parseFloat(form.odometer) || 0,
             });
             setFuelModalOpen(false);
             fetchData();
         } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleAddExpense = async (entry) => {
+    const handleAddExpense = async (form) => {
         try {
             await expensesApi.create({
-                vehicle_id: entry.vehicleId || null,
-                expense_type: entry.expenseType,
-                description: entry.description,
-                amount: parseFloat(entry.amount),
-                expense_date: entry.date,
-                receipt_number: entry.receiptNumber,
-                status: 'PENDING',
+                vehicle_id: form.vehicle_id,
+                trip_id: form.trip_id || null,
+                amount: parseFloat(form.amount),
+                type: form.type,
+                date: form.date,
             });
             setExpenseModalOpen(false);
             fetchData();
         } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const deleteFuelLog = async (id) => {
-        // Fuel logs don't have a delete endpoint — show notice
-        alert('Fuel logs cannot be deleted once recorded.');
-    };
+    const handleRefresh = () => { fetchData(); setSearch(''); setTypeFilter('All'); };
 
-    const deleteExpense = async (id) => {
-        alert('Expenses cannot be deleted once recorded.');
-    };
+    const filteredFuel = useMemo(() =>
+        fuelLogs.filter(f => (vehicleMap[f.vehicleId] || '').toLowerCase().includes(search.toLowerCase())),
+        [fuelLogs, search, vehicleMap]
+    );
 
-    const handleRefresh = () => { fetchData(); setSearch(''); setStationFilter('All'); setExpenseTypeFilter('All'); };
-
-    const filteredFuelLogs = useMemo(() => {
-        return fuelLogs.filter(f => {
-            const matchSearch  = f.vehicle.toLowerCase().includes(search.toLowerCase());
-            const matchStation = stationFilter === 'All' || f.fuelStation === stationFilter;
-            return matchSearch && matchStation;
-        });
-    }, [fuelLogs, search, stationFilter]);
-
-    const filteredExpenses = useMemo(() => {
-        return expenses.filter(e => {
-            const matchSearch   = e.vehicle.toLowerCase().includes(search.toLowerCase()) ||
-                e.description.toLowerCase().includes(search.toLowerCase());
-            const matchCategory = expenseTypeFilter === 'All' || e.expenseType === expenseTypeFilter;
-            return matchSearch && matchCategory;
-        });
-    }, [expenses, search, expenseTypeFilter]);
-
+    const filteredExpenses = useMemo(() =>
+        expenses.filter(e => {
+            const matchSearch = (vehicleMap[e.vehicleId] || '').toLowerCase().includes(search.toLowerCase());
+            const matchType   = typeFilter === 'All' || e.type === typeFilter;
+            return matchSearch && matchType;
+        }),
+        [expenses, search, typeFilter, vehicleMap]
+    );
 
     return (
         <div className="fuel-expenses-page">
             <Navbar onNavigate={onNavigate} />
-
             <div className="fe-container">
-                {/* Header */}
                 <div className="fe-header">
                     <div>
                         <h1 className="fe-title">Fuel & Expense Management</h1>
-                        <p className="fe-sub">Oversee operational overheads, refilling records, and toll road expenses.</p>
+                        <p className="fe-sub">Oversee operational overheads, refilling records, and expenses.</p>
                     </div>
-                    <div className="fe-header-buttons">
-                        <button className="btn-primary" onClick={() => {
-                            if (activeTab === 'Fuel Logs') setFuelModalOpen(true);
-                            else setExpenseModalOpen(true);
-                        }}>
-                            <MdAdd /> {activeTab === 'Fuel Logs' ? 'Add Fuel Log' : 'Add Expense Entry'}
-                        </button>
-                    </div>
+                    <button className="btn-primary" onClick={() => activeTab === 'Fuel Logs' ? setFuelModalOpen(true) : setExpenseModalOpen(true)}>
+                        <MdAdd /> {activeTab === 'Fuel Logs' ? 'Add Fuel Log' : 'Add Expense'}
+                    </button>
                 </div>
 
-                {/* Dynamic tabs */}
                 <div className="tab-bar">
-                    <button className={`tab-btn ${activeTab === 'Fuel Logs' ? 'active' : ''}`} onClick={() => { setActiveTab('Fuel Logs'); handleRefresh(); }}>
-                        <MdLocalGasStation /> Fuel Refuel Logs
+                    <button className={`tab-btn ${activeTab === 'Fuel Logs' ? 'active' : ''}`} onClick={() => setActiveTab('Fuel Logs')}>
+                        <MdLocalGasStation /> Fuel Logs
                     </button>
-                    <button className={`tab-btn ${activeTab === 'Expenses' ? 'active' : ''}`} onClick={() => { setActiveTab('Expenses'); handleRefresh(); }}>
-                        <MdAttachMoney /> Operating Expenses
+                    <button className={`tab-btn ${activeTab === 'Expenses' ? 'active' : ''}`} onClick={() => setActiveTab('Expenses')}>
+                        <MdAttachMoney /> Expenses
                     </button>
                 </div>
 
-                {/* Statistics conditional based on Tab */}
                 {activeTab === 'Fuel Logs' ? (
                     <div className="fe-stats-grid">
                         <div className="stat-box" style={{ '--accent-color': '#00D2A0' }}>
-                            <div className="stat-num">{fuelStats.totalLitres} L</div>
-                            <div className="stat-title">Total Litres Refueled</div>
+                            <div className="stat-num">{fuelStats.totalLiters} L</div>
+                            <div className="stat-title">Total Litres</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#a78bff' }}>
                             <div className="stat-num">₹{fuelStats.totalCost.toLocaleString()}</div>
                             <div className="stat-title">Total Fuel Cost</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#4F8CFF' }}>
-                            <div className="stat-num">₹{fuelStats.avgCostPerLitre} / L</div>
-                            <div className="stat-title">Average Cost / Litre</div>
+                            <div className="stat-num">₹{fuelStats.avgCost} / L</div>
+                            <div className="stat-title">Avg Cost / Litre</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#FF9F43' }}>
-                            <div className="stat-num">{fuelStats.refuelsCount}</div>
-                            <div className="stat-title">Logged Fuel Receipts</div>
+                            <div className="stat-num">{fuelStats.count}</div>
+                            <div className="stat-title">Total Logs</div>
                         </div>
                     </div>
                 ) : (
                     <div className="fe-stats-grid">
                         <div className="stat-box" style={{ '--accent-color': '#ff6b6b' }}>
-                            <div className="stat-num">₹{expenseStats.totalSpent.toLocaleString()}</div>
-                            <div className="stat-title">Total Expenses Booked</div>
+                            <div className="stat-num">₹{expenseStats.total.toLocaleString()}</div>
+                            <div className="stat-title">Total Expenses</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#4F8CFF' }}>
                             <div className="stat-num">₹{expenseStats.toll.toLocaleString()}</div>
-                            <div className="stat-title font-small">Toll Gate Audits</div>
+                            <div className="stat-title">Toll</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#00D2A0' }}>
-                            <div className="stat-num">₹{expenseStats.insurance.toLocaleString()}</div>
-                            <div className="stat-title font-small">Assets Insurance</div>
+                            <div className="stat-num">₹{expenseStats.maint.toLocaleString()}</div>
+                            <div className="stat-title">Maintenance</div>
                         </div>
                         <div className="stat-box" style={{ '--accent-color': '#FF9F43' }}>
-                            <div className="stat-num">{expenseStats.pending} Records</div>
-                            <div className="stat-title">Awaiting Approval</div>
+                            <div className="stat-num">{expenseStats.count}</div>
+                            <div className="stat-title">Total Records</div>
                         </div>
                     </div>
                 )}
 
-                {/* Toolbar */}
                 <div className="fe-toolbar">
                     <div className="toolbar-left">
                         <div className="search-wrap">
                             <MdSearch className="search-ic" />
                             <input
                                 type="text"
-                                placeholder={activeTab === 'Fuel Logs' ? 'Search vehicle or driver...' : 'Search description, vehicle...'}
+                                placeholder="Search by vehicle..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
                         </div>
-                        {activeTab === 'Fuel Logs' ? (
+                        {activeTab === 'Expenses' && (
                             <div className="filter-wrap">
-                                <select value={stationFilter} onChange={e => setStationFilter(e.target.value)}>
-                                    <option value="All">All Fuel Stations</option>
-                                    {fuelStationsList.map(st => <option key={st} value={st}>{st}</option>)}
-                                </select>
-                            </div>
-                        ) : (
-                            <div className="filter-wrap">
-                                <select value={expenseTypeFilter} onChange={e => setExpenseTypeFilter(e.target.value)}>
-                                    <option value="All">All Expense Types</option>
-                                    {expenseCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                <MdFilterList className="filter-ic" />
+                                <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                                    <option value="All">All Types</option>
+                                    {expenseTypes.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             </div>
                         )}
                     </div>
                     <div className="toolbar-right">
-                        <button className="btn-icon" title="Clear Filters" onClick={handleRefresh}><MdRefresh /></button>
+                        <button className="btn-icon" onClick={handleRefresh}><MdRefresh /></button>
                     </div>
                 </div>
 
-                {/* Tab content listings */}
                 <div className="table-card">
                     {activeTab === 'Fuel Logs' ? (
-                        filteredFuelLogs.length === 0 ? (
+                        filteredFuel.length === 0 ? (
                             <div className="empty-state-card">
-                                <h3>No refilling invoices found</h3>
-                                <p>Add a new diesel top-up log to see it list here.</p>
+                                <h3>No fuel logs found</h3>
                                 <button className="btn-primary" onClick={() => setFuelModalOpen(true)}>Add Fuel Log</button>
                             </div>
                         ) : (
@@ -451,37 +350,21 @@ export default function FuelExpenses({ onNavigate }) {
                                 <table className="fe-table-element">
                                     <thead>
                                         <tr>
-                                            <th>Invoice ID</th>
-                                            <th>Vehicle Unit</th>
-                                            <th>Refueling Operator</th>
-                                            <th>Fuel Station Station</th>
-                                            <th>Litres Refueled (L)</th>
-                                            <th>Total Cost Billing</th>
-                                            <th>Odometer Record</th>
-                                            <th>Fuel Refuel Date</th>
-                                            <th className="actions-header">Actions</th>
+                                            <th>Vehicle</th>
+                                            <th>Date</th>
+                                            <th>Litres</th>
+                                            <th>Cost (₹)</th>
+                                            <th>Odometer (km)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredFuelLogs.map(log => (
+                                        {filteredFuel.map(log => (
                                             <tr key={log.id} className="fe-tr">
-                                                <td className="fe-log-id">{log.id}</td>
-                                                <td>
-                                                    <span className="fe-v-lbl">{log.vehicle}</span>
-                                                </td>
-                                                <td>
-                                                    <span className="fe-driver-tag"><MdPerson /> {log.driver}</span>
-                                                </td>
-                                                <td>{log.fuelStation}</td>
-                                                <td>{log.litres} L</td>
+                                                <td>{vehicleMap[log.vehicleId] || log.vehicleId}</td>
+                                                <td>{log.date}</td>
+                                                <td>{log.liters} L</td>
                                                 <td>₹{log.cost.toLocaleString()}</td>
                                                 <td>{log.odometer ? `${log.odometer.toLocaleString()} km` : '—'}</td>
-                                                <td>{log.date}</td>
-                                                <td>
-                                                    <div className="actions-dropdown">
-                                                        <button className="btn-action-round delete" onClick={() => deleteFuelLog(log.id)} title="Delete Fuel Entry"><MdDelete /></button>
-                                                    </div>
-                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -491,57 +374,27 @@ export default function FuelExpenses({ onNavigate }) {
                     ) : (
                         filteredExpenses.length === 0 ? (
                             <div className="empty-state-card">
-                                <h3>No operational expenses booked</h3>
-                                <p>Register a toll or insurance invoice to compile reports.</p>
-                                <button className="btn-primary" onClick={() => setExpenseModalOpen(true)}>Add Expense Entry</button>
+                                <h3>No expenses found</h3>
+                                <button className="btn-primary" onClick={() => setExpenseModalOpen(true)}>Add Expense</button>
                             </div>
                         ) : (
                             <div className="table-responsive">
                                 <table className="fe-table-element">
                                     <thead>
                                         <tr>
-                                            <th>Expense ID</th>
-                                            <th>Expense Category</th>
-                                            <th>Vehicle HMV</th>
-                                            <th>Invoiced Amount</th>
-                                            <th>Audit Date</th>
-                                            <th>Assigned Auditor</th>
-                                            <th>Description</th>
-                                            <th>Invoice Scan File</th>
-                                            <th>Approve Status</th>
-                                            <th className="actions-header">Actions</th>
+                                            <th>Vehicle</th>
+                                            <th>Type</th>
+                                            <th>Amount (₹)</th>
+                                            <th>Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {filteredExpenses.map(exp => (
                                             <tr key={exp.id} className="fe-tr">
-                                                <td className="fe-log-id">{exp.id}</td>
-                                                <td>
-                                                    <strong className="fe-exp-cat-lbl">{exp.expenseType}</strong>
-                                                </td>
-                                                <td>
-                                                    <span className="fe-v-lbl">{exp.vehicle}</span>
-                                                </td>
+                                                <td>{vehicleMap[exp.vehicleId] || exp.vehicleId}</td>
+                                                <td><strong>{exp.type}</strong></td>
                                                 <td>₹{exp.amount.toLocaleString()}</td>
                                                 <td>{exp.date}</td>
-                                                <td>{exp.approvedBy}</td>
-                                                <td>{exp.description}</td>
-                                                <td>
-                                                    {exp.receiptUrl ? (
-                                                        <span className="fe-receipt-attachment"><MdReceipt /> {exp.receiptUrl}</span>
-                                                    ) : (
-                                                        <span className="fe-receipt-empty">No upload</span>
-                                                    )}
-                                                </td>
-                                                <td><StatusBadge status={exp.status} /></td>
-                                                <td>
-                                                    <div className="actions-dropdown">
-                                                        <button className="btn-action-round view" onClick={() => toggleExpenseApproval(exp.id)} title="Toggle Approval Status">
-                                                            {exp.status === 'Pending' ? 'Approve' : 'Hold'}
-                                                        </button>
-                                                        <button className="btn-action-round delete" onClick={() => deleteExpense(exp.id)} title="Remove expense entry"><MdDelete /></button>
-                                                    </div>
-                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -552,11 +405,8 @@ export default function FuelExpenses({ onNavigate }) {
                 </div>
             </div>
 
-            {/* Fuel Log Modal */}
-            {fuelModalOpen && <AddFuelModal onSave={handleAddFuel} onClose={() => setFuelModalOpen(false)} />}
-
-            {/* Expense Modal */}
-            {expenseModalOpen && <AddExpenseModal onSave={handleAddExpense} onClose={() => setExpenseModalOpen(false)} />}
+            {fuelModalOpen && <AddFuelModal vehicles={vehicles} onSave={handleAddFuel} onClose={() => setFuelModalOpen(false)} />}
+            {expenseModalOpen && <AddExpenseModal vehicles={vehicles} onSave={handleAddExpense} onClose={() => setExpenseModalOpen(false)} />}
         </div>
     );
 }

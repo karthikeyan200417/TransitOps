@@ -9,6 +9,7 @@ import TripManagement from './pages/TripManagement';
 import MaintenancePage from './pages/MaintenancePage';
 import FuelExpenses from './pages/FuelExpenses';
 import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -32,7 +33,6 @@ function AppContent() {
 
     // Handle navigation callback from the Navbar/StaggeredMenu
     const handleNavigate = (pageKey) => {
-        if (pageKey === 'settings') return;
         navigate(`/${pageKey}`);
     };
 
@@ -125,6 +125,14 @@ function AppContent() {
                     element={
                         <ProtectedRoute pageKey="analytics" triggerToast={triggerToast}>
                             <ReportsPage onNavigate={handleNavigate} />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute pageKey="settings" triggerToast={triggerToast}>
+                            <SettingsPage onNavigate={handleNavigate} />
                         </ProtectedRoute>
                     }
                 />

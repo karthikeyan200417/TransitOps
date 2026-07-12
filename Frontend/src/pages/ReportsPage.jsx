@@ -1,53 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import {
-    MdTimeline, MdTrendingUp, MdLeaderboard, MdList, MdDownload,
-    MdAttachMoney, MdDirectionsBus, MdPerson, MdLocalGasStation, MdBuild, MdTimer
+    MdTrendingUp, MdDirectionsBus, MdLocalGasStation,
+    MdBuild, MdAttachMoney, MdCheckCircle, MdTimer, MdRefresh
 } from 'react-icons/md';
-import { analyticsApi, auditApi } from '../services/api';
+import { analyticsApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './ReportsPage.css';
 
-
-/* ─── Custom Responsive SVG Pie/Donut Chart ─── */
-function DonutChart({ data }) {
-    const total = data.values.reduce((sum, v) => sum + v, 0);
-    let accumulatedAngle = 0;
+/* ─── Donut Chart ─── */
+function DonutChart({ data, centerLabel, centerValue }) {
+    const total = data.reduce((s, d) => s + d.value, 0);
+    let accumulated = 0;
+    const r = 85;
+    const cx = 110, cy = 110;
+    const circumference = 2 * Math.PI * r;
 
     return (
         <div className="donut-chart-wrap">
             <svg width="220" height="220" viewBox="0 0 220 220" className="donut-svg">
-                <circle cx="110" cy="110" r="85" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="20" />
-                {data.values.map((val, idx) => {
-                    const percentage = val / total;
-                    const strokeDash = percentage * 2 * Math.PI * 85;
-                    const strokeOffset = accumulatedAngle * -2 * Math.PI * 85;
-                    accumulatedAngle += percentage;
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="20" />
+                {data.map((d, i) => {
+                    const pct = total > 0 ? d.value / total : 0;
+                    const dash = pct * circumference;
+                    const offset = -accumulated * circumference;
+                    accumulated += pct;
                     return (
-                        <circle
-                            key={idx}
-                            cx="110"
-                            cy="110"
-                            r="85"
-                            fill="none"
-                            stroke={data.colors[idx]}
-                            strokeWidth="20"
-                            strokeDasharray={`${strokeDash} 999`}
-                            strokeDashoffset={strokeOffset}
-                            transform="rotate(-90 110 110)"
+                        <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                            stroke={d.color} strokeWidth="20"
+                            strokeDasharray={`${dash} 999`}
+                            strokeDashoffset={offset}
+                            transform={`rotate(-90 ${cx} ${cy})`}
                             className="donut-segment"
-                            title={`${data.labels[idx]}: ${val}%`}
                         />
                     );
                 })}
-                <circle cx="110" cy="110" r="70" fill="#15151D" />
-                <text x="110" y="105" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="700">78%</text>
-                <text x="110" y="125" textAnchor="middle" fill="#555" fontSize="11" fontWeight="600" letterSpacing="0.5">UTILIZATION</text>
+                <circle cx={cx} cy={cy} r="70" fill="#15151D" />
+                <text x={cx} y={cy - 8} textAnchor="middle" fill="#fff" fontSize="20" fontWeight="700">{centerValue}</text>
+                <text x={cx} y={cy + 12} textAnchor="middle" fill="#555" fontSize="10" fontWeight="600" letterSpacing="0.5">{centerLabel}</text>
             </svg>
             <div className="donut-legend">
-                {data.labels.map((lbl, idx) => (
-                    <div className="legend-item" key={lbl}>
-                        <span className="legend-bullet" style={{ background: data.colors[idx] }} />
-                        <span className="legend-lbl">{lbl} ({data.values[idx]}%)</span>
+                {data.map((d, i) => (
+                    <div className="legend-item" key={i}>
+                        <span className="legend-bullet" style={{ background: d.color }} />
+                        <span className="legend-lbl">{d.label}: {d.value}</span>
                     </div>
                 ))}
             </div>
@@ -55,109 +50,28 @@ function DonutChart({ data }) {
     );
 }
 
-/* ─── Custom Responsive SVG Line/Area Chart ─── */
-function LineAreaChart({ data }) {
-    // Max fuel cost: 410,000
-    const maxVal = 450000;
-    const width = 500;
-    const height = 180;
-    const padding = 20;
-
-    // Make point calculations
-    const points = data.map((item, idx) => {
-        const x = padding + (idx * (width - padding * 2)) / (data.length - 1);
-        const y = height - padding - (item.fuelCost * (height - padding * 2)) / maxVal;
-        return { x, y };
-    });
-
-    const pathD = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
-
-    return (
-        <div className="line-chart-container">
-            <svg viewBox={`0 0 ${width} ${height}`} className="line-svg">
-                {/* Grids */}
-                {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
-                    <line
-                        key={i}
-                        x1={padding}
-                        y1={padding + r * (height - padding * 2)}
-                        x2={width - padding}
-                        y2={padding + r * (height - padding * 2)}
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                    />
-                ))}
-
-                {/* Area Fill */}
-                <path d={areaD} fill="url(#purpleGrad)" opacity="0.12" />
-
-                {/* Path Line */}
-                <path d={pathD} fill="none" stroke="#6D4AFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-                {/* Points */}
-                {points.map((p, idx) => (
-                    <g key={idx}>
-                        <circle cx={p.x} cy={p.y} r="5" fill="#15151D" stroke="#6D4AFF" strokeWidth="2" className="chart-dot" />
-                        <text x={p.x} y={height - 2} textAnchor="middle" fill="#444" fontSize="10" fontWeight="600">{data[idx].month}</text>
-                        <text x={p.x} y={p.y - 10} textAnchor="middle" fill="#aaa" fontSize="9" fontWeight="700">₹{(data[idx].fuelCost / 1000)}k</text>
-                    </g>
-                ))}
-
-                <defs>
-                    <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6D4AFF" />
-                        <stop offset="100%" stopColor="#6D4AFF" stopOpacity="0" />
-                    </linearGradient>
-                </defs>
-            </svg>
-        </div>
-    );
-}
-
-/* ─── Custom Responsive SVG Bar Chart ─── */
-function ExpensesBarChart({ data }) {
-    const maxVal = 450000;
-    const width = 500;
-    const height = 180;
-    const padding = 20;
-
+/* ─── Bar Chart ─── */
+function BarChart({ data, maxVal }) {
+    const width = 500, height = 180, padding = 20;
+    const max = maxVal || Math.max(...data.map(d => d.value), 1);
     return (
         <div className="bar-chart-container">
             <svg viewBox={`0 0 ${width} ${height}`} className="bar-svg">
                 {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
-                    <line
-                        key={i}
-                        x1={padding}
-                        y1={padding + r * (height - padding * 2)}
-                        x2={width - padding}
-                        y2={padding + r * (height - padding * 2)}
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                    />
+                    <line key={i} x1={padding} y1={padding + r * (height - padding * 2)}
+                        x2={width - padding} y2={padding + r * (height - padding * 2)}
+                        stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
                 ))}
-
-                {data.map((item, idx) => {
-                    const colWidth = 36;
-                    const totalCols = data.length;
-                    const x = padding + (idx * (width - padding * 2)) / totalCols + (width - padding * 2) / (totalCols * 2) - colWidth / 2;
-                    const barHeight = (item.amount * (height - padding * 2)) / maxVal;
-                    const y = height - padding - barHeight;
-
+                {data.map((d, i) => {
+                    const colW = Math.min(40, (width - padding * 2) / data.length - 8);
+                    const x = padding + (i * (width - padding * 2)) / data.length + (width - padding * 2) / (data.length * 2) - colW / 2;
+                    const barH = (d.value / max) * (height - padding * 2);
+                    const y = height - padding - barH;
                     return (
-                        <g key={idx}>
-                            <rect
-                                x={x}
-                                y={y}
-                                width={colWidth}
-                                height={barHeight}
-                                rx="6"
-                                fill={item.color}
-                                opacity="0.8"
-                                className="chart-bar"
-                            />
-                            <text x={x + colWidth / 2} y={height - 2} textAnchor="middle" fill="#444" fontSize="9" fontWeight="600">{item.category.split(' ')[0]}</text>
-                            <text x={x + colWidth / 2} y={y - 8} textAnchor="middle" fill="#aaa" fontSize="9" fontWeight="700">₹{Math.round(item.amount / 1000)}k</text>
+                        <g key={i}>
+                            <rect x={x} y={y} width={colW} height={barH} rx="5" fill={d.color} opacity="0.85" className="chart-bar" />
+                            <text x={x + colW / 2} y={height - 3} textAnchor="middle" fill="#555" fontSize="9" fontWeight="600">{d.label}</text>
+                            <text x={x + colW / 2} y={y - 6} textAnchor="middle" fill="#aaa" fontSize="9" fontWeight="700">{d.displayValue}</text>
                         </g>
                     );
                 })}
@@ -166,232 +80,408 @@ function ExpensesBarChart({ data }) {
     );
 }
 
+/* ─── Horizontal Bar ─── */
+function HorizontalBar({ label, value, max, color }) {
+    const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+    return (
+        <div style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#aaa', marginBottom: 4 }}>
+                <span>{label}</span><span style={{ color }}>{value}</span>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 6 }}>
+                <div style={{ width: `${pct}%`, background: color, borderRadius: 4, height: '100%', transition: 'width 0.6s ease' }} />
+            </div>
+        </div>
+    );
+}
+
+/* ─── Stat Card ─── */
+function StatCard({ title, value, sub, color, icon }) {
+    return (
+        <div className="stat-box" style={{ '--accent-color': color }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <div className="stat-num">{value}</div>
+                    <div className="stat-title">{title}</div>
+                    {sub && <div style={{ fontSize: 11, color: '#555', marginTop: 4 }}>{sub}</div>}
+                </div>
+                <div style={{ color, opacity: 0.6, fontSize: 24 }}>{icon}</div>
+            </div>
+        </div>
+    );
+}
+
+const COLORS = ['#6D4AFF', '#4F8CFF', '#00D2A0', '#FF9F43', '#FF6B9D'];
+
 export default function ReportsPage({ onNavigate }) {
-    const [reports, setReports]         = useState([]);
-    const [fleetData, setFleetData]     = useState(null);
-    const [fuelData, setFuelData]       = useState(null);
-    const [expenseData, setExpenseData] = useState(null);
-    const [tripData, setTripData]       = useState(null);
-    const [loading, setLoading]         = useState(true);
+    const [fleet, setFleet]       = useState(null);
+    const [fuel, setFuel]         = useState(null);
+    const [expenses, setExpenses] = useState(null);
+    const [maint, setMaint]       = useState(null);
+    const [trips, setTrips]       = useState(null);
+    const [loading, setLoading]   = useState(true);
+    const [activeTab, setActiveTab] = useState('overview');
 
-    useEffect(() => {
-        async function load() {
-            try {
-                const [fleet, fuel, expense, trip, audit] = await Promise.all([
-                    analyticsApi.fleetUtilization().catch(() => null),
-                    analyticsApi.fuelEfficiency().catch(() => null),
-                    analyticsApi.expenses().catch(() => null),
-                    analyticsApi.trips().catch(() => null),
-                    auditApi.list(null, null, 20).catch(() => ({ logs: [] })),
-                ]);
-                setFleetData(fleet);
-                setFuelData(fuel);
-                setExpenseData(expense);
-                setTripData(trip);
-                // Build report archive from audit logs
-                if (audit?.logs) {
-                    setReports(audit.logs.slice(0, 8).map((log, i) => ({
-                        id: `AUD-${String(i + 1).padStart(3, '0')}`,
-                        title: `${log.action} on ${log.table_name}`,
-                        format: 'JSON',
-                        date: log.created_at?.split('T')[0] || '—',
-                        author: log.user_id || 'System',
-                    })));
-                }
-            } catch (e) { console.error(e); }
-            finally { setLoading(false); }
-        }
-        load();
-    }, []);
-
-    // Build chart-friendly structures from real data
-    const utilizationChart = fleetData ? {
-        labels: ['Available', 'On Trip', 'In Shop', 'Retired'],
-        values: [
-            fleetData.available_vehicles || 0,
-            fleetData.on_trip_vehicles   || 0,
-            fleetData.in_shop_vehicles   || 0,
-            (fleetData.total_vehicles || 0) - (fleetData.available_vehicles || 0) - (fleetData.on_trip_vehicles || 0) - (fleetData.in_shop_vehicles || 0),
-        ],
-        colors: ['#00D2A0', '#4F8CFF', '#FF9F43', '#FF6B9D'],
-    } : { labels: [], values: [], colors: [] };
-
-    const fuelChartData = fuelData?.monthly_trends
-        ? fuelData.monthly_trends.map(m => ({ month: m.month, value: m.total_cost, color: '#4F8CFF' }))
-        : [];
-
-    const expenseChartData = expenseData?.by_category
-        ? expenseData.by_category.map((c, i) => ({
-            category: c.expense_type,
-            amount: c.total,
-            color: ['#6D4AFF', '#4F8CFF', '#00D2A0', '#FF9F43', '#FF6B9D'][i % 5],
-        }))
-        : [];
-
-    // Leaderboard stubs (build from fleet/trip data if available)
-    const driverLeaderboard = tripData?.top_drivers || [];
-    const vehicleLeaderboard = fleetData?.top_vehicles || [];
-
-    const triggerDownload = (report) => {
-        alert(`Download: ${report.title}\nFormat: ${report.format}`);
+    const load = async () => {
+        setLoading(true);
+        try {
+            const [f, fu, ex, m, t] = await Promise.all([
+                analyticsApi.fleetUtilization().catch(() => null),
+                analyticsApi.fuelEfficiency().catch(() => null),
+                analyticsApi.expenses().catch(() => null),
+                analyticsApi.maintenance().catch(() => null),
+                analyticsApi.trips().catch(() => null),
+            ]);
+            setFleet(f); setFuel(fu); setExpenses(ex); setMaint(m); setTrips(t);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
-    const generatePDFExport = () => {
-        alert('Compiling current screen metrics into standard ERP PDF Report format...');
-    };
+    useEffect(() => { load(); }, []);
 
-    const generateCSVExport = () => {
-        alert('Consolidating core database entries. Exporting comprehensive report database file...');
-    };
+    if (loading) return (
+        <div className="reports-page">
+            <Navbar onNavigate={onNavigate} />
+            <div className="rep-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#555' }}>
+                Loading analytics…
+            </div>
+        </div>
+    );
+
+    // ── Derived data ──────────────────────────────────────────────
+    const fleetDonut = fleet ? [
+        { label: 'Available', value: fleet.items.filter(v => v.status === 'AVAILABLE').length, color: '#00D2A0' },
+        { label: 'On Trip',   value: fleet.items.filter(v => v.status === 'ON_TRIP').length,   color: '#4F8CFF' },
+        { label: 'In Shop',   value: fleet.items.filter(v => v.status === 'IN_SHOP').length,   color: '#FF9F43' },
+        { label: 'Retired',   value: fleet.items.filter(v => v.status === 'RETIRED').length,   color: '#FF6B9D' },
+    ] : [];
+
+    const tripDonut = trips ? trips.breakdown.map((b, i) => ({
+        label: b.status.charAt(0) + b.status.slice(1).toLowerCase(),
+        value: b.count,
+        color: { COMPLETED: '#00D2A0', DISPATCHED: '#4F8CFF', DRAFT: '#888', CANCELLED: '#FF6B9D' }[b.status] || COLORS[i],
+    })) : [];
+
+    const expenseBar = expenses ? expenses.breakdown.map((b, i) => ({
+        label: b.type,
+        value: parseFloat(b.total_amount),
+        displayValue: `₹${Math.round(parseFloat(b.total_amount) / 1000)}k`,
+        color: COLORS[i % COLORS.length],
+    })) : [];
+
+    const topFuelVehicles = fuel ? [...fuel.items]
+        .filter(v => parseFloat(v.total_liters) > 0)
+        .sort((a, b) => parseFloat(b.total_fuel_cost) - parseFloat(a.total_fuel_cost))
+        .slice(0, 8) : [];
+
+    const maxFuelCost = topFuelVehicles.length > 0 ? parseFloat(topFuelVehicles[0].total_fuel_cost) : 1;
+
+    const topMaintVehicles = maint ? [...maint.items]
+        .filter(v => parseFloat(v.total_maintenance_cost) > 0)
+        .sort((a, b) => parseFloat(b.total_maintenance_cost) - parseFloat(a.total_maintenance_cost))
+        .slice(0, 8) : [];
+
+    const maxMaintCost = topMaintVehicles.length > 0 ? parseFloat(topMaintVehicles[0].total_maintenance_cost) : 1;
+
+    const topTripVehicles = fleet ? [...fleet.items]
+        .sort((a, b) => b.total_trips - a.total_trips)
+        .slice(0, 8) : [];
+
+    const maxTrips = topTripVehicles.length > 0 ? topTripVehicles[0].total_trips : 1;
+
+    const tabs = ['overview', 'fleet', 'trips', 'fuel', 'expenses', 'maintenance'];
 
     return (
         <div className="reports-page">
             <Navbar onNavigate={onNavigate} />
-
             <div className="rep-container">
+
                 {/* Header */}
                 <div className="rep-header">
                     <div>
-                        <h1 className="rep-title">Reports & Executive Analytics</h1>
-                        <p className="rep-sub">Audit fleet deployment coefficients, spending parameters, and operations ledger audits.</p>
+                        <h1 className="rep-title">Analytics & Reports</h1>
+                        <p className="rep-sub">Live data from all fleet operations — fleet, trips, fuel, expenses and maintenance.</p>
                     </div>
-                    <div className="rep-header-buttons">
-                        <button className="btn-ghost" onClick={generateCSVExport}>
-                            <MdDownload /> Export CSV
+                    <button className="btn-icon" title="Refresh" onClick={load}><MdRefresh /></button>
+                </div>
+
+                {/* Tabs */}
+                <div className="tab-bar" style={{ marginBottom: 24 }}>
+                    {tabs.map(t => (
+                        <button key={t} className={`tab-btn ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
                         </button>
-                        <button className="btn-primary" onClick={generatePDFExport}>
-                            <MdDownload /> Generate PDF Report
-                        </button>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Global Stats Grid */}
-                <div className="rep-stats-grid">
-                    <div className="stat-box" style={{ '--accent-color': '#00D2A0' }}>
-                        <div className="stat-num">78.4%</div>
-                        <div className="stat-title">Real Utilization Rate</div>
-                    </div>
-                    <div className="stat-box" style={{ '--accent-color': '#a78bff' }}>
-                        <div className="stat-num">₹14.2 L</div>
-                        <div className="stat-title">Estimated Monthly Revenue</div>
-                    </div>
-                    <div className="stat-box" style={{ '--accent-color': '#FF9F43' }}>
-                        <div className="stat-num">₹3.8 L</div>
-                        <div className="stat-title">Fuel Expenditures</div>
-                    </div>
-                    <div className="stat-box" style={{ '--accent-color': '#4F8CFF' }}>
-                        <div className="stat-num">₹89 k</div>
-                        <div className="stat-title">Servicing Repair Expenses</div>
-                    </div>
-                    <div className="stat-box" style={{ '--accent-color': '#FF6B6B' }}>
-                        <div className="stat-num">91%</div>
-                        <div className="stat-title">Driver Safety Quotient</div>
-                    </div>
-                </div>
-
-                {/* Charts Grid */}
-                <div className="rep-charts-grid">
-                    <div className="chart-card">
-                        <h3><MdTrendingUp /> Fleet Utilization Breakdown</h3>
-                        <p className="chart-sub">Share of operations time classified by vehicle usage categories.</p>
-                        <DonutChart data={utilizationChart} />
-                    </div>
-
-                    <div className="chart-card">
-                        <h3><MdLocalGasStation /> Fuel Cost Trends (6 Months)</h3>
-                        <p className="chart-sub">Development of aggregate invoice billing on fuel refills.</p>
-                        <LineAreaChart data={fuelChartData} />
-                    </div>
-
-                    <div className="chart-card">
-                        <h3><MdAttachMoney /> Expenditures breakdown by category</h3>
-                        <p className="chart-sub">Consolidated operational spending profiles for July 2026.</p>
-                        <ExpensesBarChart data={expenseChartData} />
-                    </div>
-                </div>
-
-                {/* Analytics Insights Leaderboards */}
-                <div className="rep-leaderboard-grid">
-                    <div className="leader-card">
-                        <h3><MdPerson /> Drivers Leaderboard</h3>
-                        <p className="chart-sub">Top operating personnel ranked by mileage safety metrics.</p>
-                        <div className="leader-list">
-                            {driverLeaderboard.length > 0 ? driverLeaderboard.map((drv, i) => (
-                                <div className="leader-row" key={i}>
-                                    <span className="lead-rank">#{i + 1}</span>
-                                    <div className="lead-name-block">
-                                        <strong className="lead-main-lbl">{drv.name || drv.driver_name}</strong>
-                                        <span className="lead-sub-lbl">{drv.trips || drv.completed_trips} trips completed</span>
-                                    </div>
-                                    <span className="lead-metric-badge" style={{ color: (drv.score || drv.safety_score) >= 90 ? '#00D2A0' : '#4F8CFF' }}>
-                                        {drv.score || drv.safety_score} Safety
-                                    </span>
-                                </div>
-                            )) : (
-                                <div style={{ color: '#666', padding: '12px', fontSize: '13px' }}>No driver data yet.</div>
-                            )}
+                {/* ── OVERVIEW ── */}
+                {activeTab === 'overview' && (
+                    <>
+                        <div className="rep-stats-grid">
+                            <StatCard title="Total Vehicles"     value={fleet?.total_vehicles ?? '—'}                                          color="#6D4AFF" icon={<MdDirectionsBus />} />
+                            <StatCard title="Fleet Utilization"  value={fleet ? `${fleet.utilization_rate_pct}%` : '—'}                        color="#00D2A0" icon={<MdTrendingUp />} />
+                            <StatCard title="Total Trips"        value={trips?.total_trips ?? '—'}                                             color="#4F8CFF" icon={<MdTimer />} />
+                            <StatCard title="Completion Rate"    value={trips ? `${trips.completion_rate_pct}%` : '—'}                         color="#00D2A0" icon={<MdCheckCircle />} />
+                            <StatCard title="Total Revenue"      value={trips ? `₹${Number(trips.total_revenue).toLocaleString()}` : '—'}      color="#FF6B9D" icon={<MdAttachMoney />} />
+                            <StatCard title="Total Expenses"     value={expenses ? `₹${Number(expenses.total_expenses).toLocaleString()}` : '—'} color="#FF9F43" icon={<MdAttachMoney />} />
+                            <StatCard title="Fleet Avg km/L"     value={fuel ? `${fuel.fleet_avg_km_per_liter} km/L` : '—'}                    color="#4F8CFF" icon={<MdLocalGasStation />} />
+                            <StatCard title="In Maintenance"     value={maint?.vehicles_in_maintenance ?? '—'}                                 color="#FF9F43" icon={<MdBuild />} />
                         </div>
-                    </div>
 
-                    <div className="leader-card">
-                        <h3><MdDirectionsBus /> High-Utilization Vehicles</h3>
-                        <p className="chart-sub">High mileage asset run hours compiled since service registration.</p>
-                        <div className="leader-list">
-                            {vehicleLeaderboard.length > 0 ? vehicleLeaderboard.map((veh, i) => (
-                                <div className="leader-row" key={i}>
-                                    <span className="lead-rank">#{i + 1}</span>
-                                    <div className="lead-name-block">
-                                        <strong className="lead-main-lbl">{veh.registration_number || veh.regNumber}</strong>
-                                        <span className="lead-sub-lbl">{veh.type} — {veh.total_distance || veh.distanceCovered} km</span>
-                                    </div>
-                                    <span className="lead-util-time"><MdTimer /> {veh.trips || veh.utilizationHrs} trips</span>
-                                </div>
-                            )) : (
-                                <div style={{ color: '#666', padding: '12px', fontSize: '13px' }}>No vehicle data yet.</div>
-                            )}
+                        <div className="rep-charts-grid">
+                            <div className="chart-card">
+                                <h3><MdDirectionsBus /> Fleet Status</h3>
+                                <p className="chart-sub">Vehicle distribution by current status.</p>
+                                {fleetDonut.length > 0
+                                    ? <DonutChart data={fleetDonut} centerValue={`${fleet.utilization_rate_pct}%`} centerLabel="ON TRIP" />
+                                    : <p style={{ color: '#555' }}>No data</p>}
+                            </div>
+                            <div className="chart-card">
+                                <h3><MdTimer /> Trip Status Breakdown</h3>
+                                <p className="chart-sub">Distribution of trips by current status.</p>
+                                {tripDonut.length > 0
+                                    ? <DonutChart data={tripDonut} centerValue={trips?.completion_rate_pct + '%'} centerLabel="COMPLETED" />
+                                    : <p style={{ color: '#555' }}>No data</p>}
+                            </div>
+                            <div className="chart-card">
+                                <h3><MdAttachMoney /> Expenses by Type</h3>
+                                <p className="chart-sub">Total spending breakdown per expense category.</p>
+                                {expenseBar.length > 0
+                                    ? <BarChart data={expenseBar} />
+                                    : <p style={{ color: '#555' }}>No data</p>}
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                )}
 
-                {/* Document Reports Archive */}
-                <div className="reports-archive-card">
-                    <div className="rac-header">
-                        <h3><MdList /> Exportable Auditing Records</h3>
-                        <p className="chart-sub">Compiled archive logs prepared and certified for financial consolidation.</p>
-                    </div>
-                    <div className="table-responsive">
-                        <table className="rep-table-element">
-                            <thead>
-                                <tr>
-                                    <th>Log ID</th>
-                                    <th>Document Title</th>
-                                    <th>Export Format</th>
-                                    <th>Compiled Date</th>
-                                    <th>Authorized Compiler</th>
-                                    <th className="actions-header">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reports.map(rep => (
-                                    <tr key={rep.id} className="rep-row-tr">
-                                        <td className="rep-id-col">{rep.id}</td>
-                                        <td><strong className="rep-title-lbl">{rep.title}</strong></td>
-                                        <td>
-                                            <span className={`format-chip ${rep.format.toLowerCase()}`}>{rep.format}</span>
-                                        </td>
-                                        <td>{rep.date}</td>
-                                        <td>{rep.author}</td>
-                                        <td>
-                                            <div className="actions-dropdown">
-                                                <button className="btn-action-round view" onClick={() => triggerDownload(rep)} title="Download certified log file"><MdDownload /></button>
-                                            </div>
-                                        </td>
+                {/* ── FLEET ── */}
+                {activeTab === 'fleet' && fleet && (
+                    <div className="chart-card">
+                        <h3><MdDirectionsBus /> Fleet Utilization — All Vehicles</h3>
+                        <p className="chart-sub">Trips completed and revenue generated per vehicle.</p>
+                        <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                            <table className="rep-table-element">
+                                <thead>
+                                    <tr>
+                                        <th>Reg #</th><th>Model</th><th>Status</th>
+                                        <th>Total Trips</th><th>Distance (km)</th><th>Revenue (₹)</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {fleet.items.map(v => (
+                                        <tr key={v.vehicle_id} className="rep-row-tr">
+                                            <td style={{ color: '#a78bff', fontWeight: 700 }}>{v.registration_number}</td>
+                                            <td>{v.name_model}</td>
+                                            <td><span style={{ color: { AVAILABLE: '#00D2A0', ON_TRIP: '#4F8CFF', IN_SHOP: '#FF9F43', RETIRED: '#FF6B9D' }[v.status] || '#888', fontSize: 12, fontWeight: 600 }}>{v.status}</span></td>
+                                            <td>{v.total_trips}</td>
+                                            <td>{Number(v.total_distance_km).toLocaleString()}</td>
+                                            <td>₹{Number(v.total_revenue).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* ── TRIPS ── */}
+                {activeTab === 'trips' && trips && (
+                    <>
+                        <div className="rep-stats-grid">
+                            <StatCard title="Total Trips"     value={trips.total_trips}                                          color="#4F8CFF" icon={<MdTimer />} />
+                            <StatCard title="Completion Rate" value={`${trips.completion_rate_pct}%`}                            color="#00D2A0" icon={<MdCheckCircle />} />
+                            <StatCard title="Total Revenue"   value={`₹${Number(trips.total_revenue).toLocaleString()}`}         color="#FF6B9D" icon={<MdAttachMoney />} />
+                        </div>
+                        <div className="rep-charts-grid">
+                            <div className="chart-card">
+                                <h3><MdTimer /> Trip Status Distribution</h3>
+                                <p className="chart-sub">Count of trips per status.</p>
+                                <DonutChart data={tripDonut} centerValue={`${trips.completion_rate_pct}%`} centerLabel="COMPLETED" />
+                            </div>
+                            <div className="chart-card">
+                                <h3><MdAttachMoney /> Revenue by Status</h3>
+                                <p className="chart-sub">Revenue generated per trip status.</p>
+                                <BarChart data={trips.breakdown.map((b, i) => ({
+                                    label: b.status.slice(0, 4),
+                                    value: parseFloat(b.total_revenue),
+                                    displayValue: `₹${Math.round(parseFloat(b.total_revenue) / 1000)}k`,
+                                    color: COLORS[i % COLORS.length],
+                                }))} />
+                            </div>
+                        </div>
+                        <div className="chart-card" style={{ marginTop: 0 }}>
+                            <h3>Trip Breakdown Detail</h3>
+                            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                                <table className="rep-table-element">
+                                    <thead><tr><th>Status</th><th>Count</th><th>Revenue (₹)</th><th>Distance (km)</th></tr></thead>
+                                    <tbody>
+                                        {trips.breakdown.map(b => (
+                                            <tr key={b.status} className="rep-row-tr">
+                                                <td style={{ fontWeight: 600, color: { COMPLETED: '#00D2A0', DISPATCHED: '#4F8CFF', DRAFT: '#888', CANCELLED: '#FF6B9D' }[b.status] || '#aaa' }}>{b.status}</td>
+                                                <td>{b.count}</td>
+                                                <td>₹{Number(b.total_revenue).toLocaleString()}</td>
+                                                <td>{Number(b.total_distance_km).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ── FUEL ── */}
+                {activeTab === 'fuel' && fuel && (
+                    <>
+                        <div className="rep-stats-grid">
+                            <StatCard title="Fleet Avg km/L" value={`${fuel.fleet_avg_km_per_liter} km/L`} color="#4F8CFF" icon={<MdLocalGasStation />} />
+                        </div>
+                        <div className="rep-leaderboard-grid">
+                            <div className="leader-card">
+                                <h3><MdLocalGasStation /> Top Fuel Cost — Vehicles</h3>
+                                <p className="chart-sub">Vehicles with highest fuel expenditure.</p>
+                                <div className="leader-list" style={{ marginTop: 16 }}>
+                                    {topFuelVehicles.map(v => (
+                                        <HorizontalBar key={v.vehicle_id}
+                                            label={`${v.registration_number} (${v.name_model})`}
+                                            value={`₹${Number(v.total_fuel_cost).toLocaleString()}`}
+                                            max={maxFuelCost}
+                                            color="#4F8CFF"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="leader-card">
+                                <h3><MdTrendingUp /> Fuel Efficiency — km/L</h3>
+                                <p className="chart-sub">Best performing vehicles by km per litre.</p>
+                                <div className="leader-list" style={{ marginTop: 16 }}>
+                                    {[...fuel.items].filter(v => parseFloat(v.km_per_liter) > 0)
+                                        .sort((a, b) => parseFloat(b.km_per_liter) - parseFloat(a.km_per_liter))
+                                        .slice(0, 8)
+                                        .map(v => (
+                                            <HorizontalBar key={v.vehicle_id}
+                                                label={`${v.registration_number} (${v.name_model})`}
+                                                value={`${v.km_per_liter} km/L`}
+                                                max={Math.max(...fuel.items.map(x => parseFloat(x.km_per_liter)))}
+                                                color="#00D2A0"
+                                            />
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="chart-card">
+                            <h3>Full Fuel Efficiency Table</h3>
+                            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                                <table className="rep-table-element">
+                                    <thead><tr><th>Reg #</th><th>Model</th><th>Liters</th><th>Fuel Cost (₹)</th><th>Distance (km)</th><th>km/L</th></tr></thead>
+                                    <tbody>
+                                        {[...fuel.items].sort((a, b) => parseFloat(b.km_per_liter) - parseFloat(a.km_per_liter)).map(v => (
+                                            <tr key={v.vehicle_id} className="rep-row-tr">
+                                                <td style={{ color: '#a78bff', fontWeight: 700 }}>{v.registration_number}</td>
+                                                <td>{v.name_model}</td>
+                                                <td>{Number(v.total_liters).toLocaleString()}</td>
+                                                <td>₹{Number(v.total_fuel_cost).toLocaleString()}</td>
+                                                <td>{Number(v.total_distance_km).toLocaleString()}</td>
+                                                <td style={{ color: parseFloat(v.km_per_liter) > parseFloat(fuel.fleet_avg_km_per_liter) ? '#00D2A0' : '#FF9F43', fontWeight: 700 }}>{v.km_per_liter}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ── EXPENSES ── */}
+                {activeTab === 'expenses' && expenses && (
+                    <>
+                        <div className="rep-stats-grid">
+                            <StatCard title="Total Expenses" value={`₹${Number(expenses.total_expenses).toLocaleString()}`} color="#FF9F43" icon={<MdAttachMoney />} />
+                            {expenses.breakdown.map((b, i) => (
+                                <StatCard key={b.type} title={b.type} value={`₹${Number(b.total_amount).toLocaleString()}`} sub={`${b.count} records`} color={COLORS[i % COLORS.length]} icon={<MdAttachMoney />} />
+                            ))}
+                        </div>
+                        <div className="chart-card">
+                            <h3><MdAttachMoney /> Expenses by Category</h3>
+                            <p className="chart-sub">Total amount and count per expense type.</p>
+                            <BarChart data={expenseBar} />
+                            <div style={{ overflowX: 'auto', marginTop: 20 }}>
+                                <table className="rep-table-element">
+                                    <thead><tr><th>Type</th><th>Count</th><th>Total Amount (₹)</th></tr></thead>
+                                    <tbody>
+                                        {expenses.breakdown.map((b, i) => (
+                                            <tr key={b.type} className="rep-row-tr">
+                                                <td style={{ color: COLORS[i % COLORS.length], fontWeight: 700 }}>{b.type}</td>
+                                                <td>{b.count}</td>
+                                                <td>₹{Number(b.total_amount).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ── MAINTENANCE ── */}
+                {activeTab === 'maintenance' && maint && (
+                    <>
+                        <div className="rep-stats-grid">
+                            <StatCard title="Total Maint. Cost"   value={`₹${Number(maint.total_maintenance_cost).toLocaleString()}`} color="#FF9F43" icon={<MdBuild />} />
+                            <StatCard title="Vehicles in Maint."  value={maint.vehicles_in_maintenance}                               color="#FF6B9D" icon={<MdBuild />} />
+                        </div>
+                        <div className="rep-leaderboard-grid">
+                            <div className="leader-card">
+                                <h3><MdBuild /> Highest Maintenance Cost</h3>
+                                <p className="chart-sub">Vehicles with most maintenance spending.</p>
+                                <div className="leader-list" style={{ marginTop: 16 }}>
+                                    {topMaintVehicles.map(v => (
+                                        <HorizontalBar key={v.vehicle_id}
+                                            label={`${v.registration_number} (${v.name_model})`}
+                                            value={`₹${Number(v.total_maintenance_cost).toLocaleString()}`}
+                                            max={maxMaintCost}
+                                            color="#FF9F43"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="leader-card">
+                                <h3><MdDirectionsBus /> Most Trips Completed</h3>
+                                <p className="chart-sub">Vehicles ranked by completed trips.</p>
+                                <div className="leader-list" style={{ marginTop: 16 }}>
+                                    {topTripVehicles.map(v => (
+                                        <HorizontalBar key={v.vehicle_id}
+                                            label={`${v.registration_number} (${v.name_model})`}
+                                            value={`${v.total_trips} trips`}
+                                            max={maxTrips}
+                                            color="#6D4AFF"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="chart-card">
+                            <h3>Full Maintenance Table</h3>
+                            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                                <table className="rep-table-element">
+                                    <thead><tr><th>Reg #</th><th>Model</th><th>Total Cost (₹)</th><th>Active</th><th>Completed</th></tr></thead>
+                                    <tbody>
+                                        {[...maint.items].sort((a, b) => parseFloat(b.total_maintenance_cost) - parseFloat(a.total_maintenance_cost)).map(v => (
+                                            <tr key={v.vehicle_id} className="rep-row-tr">
+                                                <td style={{ color: '#a78bff', fontWeight: 700 }}>{v.registration_number}</td>
+                                                <td>{v.name_model}</td>
+                                                <td>₹{Number(v.total_maintenance_cost).toLocaleString()}</td>
+                                                <td style={{ color: v.active_maintenance_count > 0 ? '#FF9F43' : '#555' }}>{v.active_maintenance_count}</td>
+                                                <td style={{ color: '#00D2A0' }}>{v.completed_maintenance_count}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+
             </div>
         </div>
     );
