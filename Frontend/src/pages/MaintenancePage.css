@@ -1,0 +1,164 @@
+/* ── Maintenance Page CSS ── */
+.maintenance-page {
+    background: transparent;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    color: #e0e0e0;
+}
+
+.mnt-container {
+    padding: 28px 36px 60px;
+    max-width: 1600px;
+    margin: 0 auto;
+    animation: pageFadeIn 0.35s ease both;
+}
+
+/* Header */
+.mnt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.mnt-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.mnt-sub {
+    font-size: 13px;
+    color: #666;
+    margin: 5px 0 0;
+    max-width: 700px;
+}
+
+/* Stats */
+.mnt-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+/* Toolbar */
+.mnt-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.mnt-id {
+    font-weight: 700;
+    color: #a78bff !important;
+}
+
+.v-assign-bubble {
+    background: rgba(109, 74, 255, 0.08);
+    border: 1px solid rgba(109, 74, 255, 0.2);
+    color: #a78bff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.type-prio-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mnt-type {
+    font-weight: 600;
+    color: #eee;
+}
+
+.mnt-priority-indicator {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 1px 6px;
+    letter-spacing: 0.5px;
+}
+
+.mech-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+.mech-tag svg {
+    color: #888;
+}
+
+.mnt-tr {
+    transition: background 0.15s;
+}
+
+.mnt-tr:hover {
+    background: rgba(109, 74, 255, 0.03);
+}
+
+.mnt-table-element {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 1000px;
+}
+
+.mnt-table-element th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #555;
+    letter-spacing: 0.8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.mnt-table-element td {
+    padding: 14px 18px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    vertical-align: middle;
+}
+
+.mnt-table-element tr:last-child td {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .mnt-container {
+        padding: 16px 16px 40px;
+    }
+
+    .mnt-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-left {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-wrap input {
+        width: 100%;
+    }
+}

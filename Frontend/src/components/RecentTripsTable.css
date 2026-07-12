@@ -1,0 +1,71 @@
+.card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 20px 24px;
+}
+
+.card-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin: 0 0 16px 0;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.trips-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', sans-serif;
+}
+
+.trips-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #555;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.trips-table td {
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #bbb;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    white-space: nowrap;
+}
+
+.trip-row {
+    transition: background 0.15s;
+}
+
+.trip-row:hover {
+    background: rgba(109, 74, 255, 0.04);
+}
+
+.trip-id {
+    font-weight: 600;
+    color: #a78bff !important;
+    font-size: 13px;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.eta {
+    color: #888 !important;
+    font-size: 13px;
+}

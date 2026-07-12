@@ -1,0 +1,203 @@
+/* ── Fuel and Expenses CSS ── */
+.fuel-expenses-page {
+    background: transparent;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    color: #e0e0e0;
+}
+
+.fe-container {
+    padding: 28px 36px 60px;
+    max-width: 1600px;
+    margin: 0 auto;
+    animation: pageFadeIn 0.35s ease both;
+}
+
+/* Header */
+.fe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.fe-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.fe-sub {
+    font-size: 13px;
+    color: #666;
+    margin: 5px 0 0;
+    max-width: 700px;
+}
+
+/* Tab Bar styled in Glassmorphism */
+.tab-bar {
+    display: flex;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 6px;
+    margin-bottom: 22px;
+    align-self: flex-start;
+    width: fit-content;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    cursor: pointer;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.22s;
+}
+
+.tab-btn:hover {
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+    background: rgba(109, 74, 255, 0.12);
+    color: #a78bff;
+    box-shadow: inset 0 0 10px rgba(109, 74, 255, 0.08);
+    border: 1px solid rgba(109, 74, 255, 0.15);
+}
+
+/* Stats */
+.fe-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.font-small {
+    font-size: 11px !important;
+}
+
+/* Toolbar */
+.fe-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.fe-log-id {
+    font-weight: 700;
+    color: #a78bff !important;
+}
+
+.fe-v-lbl {
+    background: rgba(79, 140, 255, 0.08);
+    border: 1px solid rgba(79, 140, 255, 0.2);
+    color: #4F8CFF;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.fe-driver-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+.fe-driver-tag svg {
+    color: #888;
+}
+
+.fe-exp-cat-lbl {
+    color: #ddd;
+    font-weight: 600;
+}
+
+.fe-receipt-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #a78bff;
+    font-size: 12px;
+}
+
+.fe-receipt-empty {
+    color: #555;
+}
+
+.fe-tr {
+    transition: background 0.15s;
+}
+
+.fe-tr:hover {
+    background: rgba(109, 74, 255, 0.03);
+}
+
+.fe-table-element {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 1000px;
+}
+
+.fe-table-element th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #555;
+    letter-spacing: 0.8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.fe-table-element td {
+    padding: 14px 18px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    vertical-align: middle;
+}
+
+.fe-table-element tr:last-child td {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .fe-container {
+        padding: 16px 16px 40px;
+    }
+
+    .fe-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-left {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-wrap input {
+        width: 100%;
+    }
+}
