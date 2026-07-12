@@ -1,0 +1,16 @@
+license_no,name,category,expiry,trip_completion_pct,safety_score,status,first_trip_date,total_trips,avg_trip_distance,cancelled_count,days_to_license_expiry,trips_per_month,cancellation_rate,composite_risk_score,license_risk_bucket,driver_risk_bucket
+DL53393243,Kabir Verma,Transport,2026-05-13,87,60,Off Duty,2026-06-04,1.0,599.0,0.0,-60,0.79,0.0,21.2,Critical,Medium
+DL20353080,Divya Reddy,HMV,2027-02-22,92,90,Suspended,2026-06-11,1.0,140.0,0.0,225,0.97,0.0,7.2,Safe,Low
+DL72569945,Sameer Kapoor,LMV,2028-06-02,82,75,On Trip,2026-07-06,1.0,122.0,1.0,691,1.0,1.0,37.2,Safe,High
+DL57596249,Rohan Joshi,HMV,2028-03-28,80,82,Off Duty,2026-05-29,5.0,644.8,3.0,625,3.41,0.6,27.2,Safe,High
+DL44421517,Vikram Iyer,LMV,2027-11-18,80,67,Off Duty,2026-06-04,5.0,537.6,3.0,494,3.95,0.6,33.2,Safe,High
+DL98294143,Meera Iyer,Transport,2028-02-10,93,97,Off Duty,2026-06-06,1.0,563.0,1.0,578,0.83,1.0,24.0,Safe,Medium
+DL46205409,Anjali Iyer,HMV,2028-04-13,75,79,Available,2026-06-22,1.0,342.0,0.0,641,1.0,0.0,18.4,Safe,Medium
+DL26387636,Raven Kapoor,Transport,2028-02-08,90,91,Available,2026-06-03,4.0,517.75,1.0,576,3.08,0.25,12.6,Safe,Low
+DL83398151,Priya Mehta,HMV,2026-08-23,100,63,On Trip,2026-06-02,2.0,429.5,0.0,42,1.5,0.0,14.8,Warning,Low
+DL24962050,Aditi Reddy,HMV,2027-12-13,90,63,Available,2026-06-15,1.0,252.0,0.0,519,1.0,0.0,18.8,Safe,Medium
+DL82418594,Aditi Iyer,LMV,2027-01-10,89,98,Off Duty,2026-06-07,6.0,428.5,3.0,182,5.14,0.5,15.2,Safe,Low
+DL76498855,Priya Mehta,HMV,2027-03-30,83,79,Off Duty,2026-06-11,2.0,319.0,1.0,261,1.94,0.5,25.2,Safe,High
+DL17739244,Divya Sharma,LMV,2028-05-07,78,65,Available,2026-05-29,7.0,510.14285714285717,2.0,665,4.77,0.2857142857142857,28.51,Safe,High
+DL32678805,Aditi Patel,LMV,2027-04-13,92,98,On Trip,,0.0,0.0,0.0,275,0.0,0.0,4.0,Safe,Low
+DL14342720,Vikram Malhotra,HMV,2027-06-05,72,74,On Trip,2026-06-24,3.0,637.3333333333334,0.0,328,3.0,0.0,21.6,Safe,Medium
