@@ -1,0 +1,41 @@
+trip_id,reg_no,license_no,source,destination,cargo_weight_kg,planned_distance_km,status,date,capacity_kg,vehicle_type,cargo_to_capacity_ratio,distance_bucket,route_pair
+TRIP1000,TN05TV5133,DL17739244,Surat,Ahmedabad,5320,455,Draft,2026-06-08,5000,Truck,1.064,long,Surat→Ahmedabad
+TRIP1001,MH14TR6107,DL82418594,Gandhinagar,Ahmedabad,1420,93,Draft,2026-07-02,3500,Trailer,0.406,short,Gandhinagar→Ahmedabad
+TRIP1002,TN05TV5133,DL44421517,Surat,Gandhinagar,5074,469,Draft,2026-06-13,5000,Truck,1.015,long,Surat→Gandhinagar
+TRIP1003,MH05TN4919,DL44421517,Gandhinagar,Surat,3497,468,Draft,2026-06-04,5000,Truck,0.699,long,Gandhinagar→Surat
+TRIP1004,MH07IE6514,DL14342720,Surat,Gandhinagar,1084,638,Completed,2026-07-11,500,Trailer,2.168,long,Surat→Gandhinagar
+TRIP1005,RJ05EJ5374,DL57596249,Surat,Ahmedabad,1580,803,Completed,2026-06-06,1000,Van,1.58,long,Surat→Ahmedabad
+TRIP1006,MH07IE6514,DL17739244,Gandhinagar,Surat,558,304,Dispatched,2026-06-05,500,Trailer,1.116,medium,Gandhinagar→Surat
+TRIP1007,KA01XT3546,DL82418594,Ahmedabad,Gandhinagar,4228,376,Cancelled,2026-06-21,5000,Van,0.846,medium,Ahmedabad→Gandhinagar
+TRIP1008,GJ02EM4502,DL82418594,Ahmedabad,Gandhinagar,628,441,Cancelled,2026-06-24,2000,Van,0.314,long,Ahmedabad→Gandhinagar
+TRIP1009,GJ07FU9486,DL46205409,Gandhinagar,Ahmedabad,275,342,Completed,2026-06-22,500,Van,0.55,medium,Gandhinagar→Ahmedabad
+TRIP1010,DL05FM8517,DL17739244,Surat,Ahmedabad,1027,693,Cancelled,2026-06-16,1000,Van,1.027,long,Surat→Ahmedabad
+TRIP1011,DL05US9785,DL57596249,Surat,Gandhinagar,3163,660,Cancelled,2026-07-09,3500,Truck,0.904,long,Surat→Gandhinagar
+TRIP1012,DL01CM2133,DL44421517,Gandhinagar,Surat,1273,735,Cancelled,2026-07-05,3500,Trailer,0.364,long,Gandhinagar→Surat
+TRIP1013,GJ02GP4257,DL82418594,Surat,Ahmedabad,2160,338,Draft,2026-06-07,3500,Trailer,0.617,medium,Surat→Ahmedabad
+TRIP1014,MH05HL9900,DL20353080,Ahmedabad,Gandhinagar,2040,140,Dispatched,2026-06-11,5000,Mini Truck,0.408,medium,Ahmedabad→Gandhinagar
+TRIP1015,KA05XC3471,DL44421517,Surat,Gandhinagar,4368,445,Cancelled,2026-06-12,5000,Van,0.874,long,Surat→Gandhinagar
+TRIP1016,MH01IP4770,DL26387636,Ahmedabad,Gandhinagar,4715,215,Dispatched,2026-07-08,5000,Truck,0.943,medium,Ahmedabad→Gandhinagar
+TRIP1017,MH07UE2588,DL17739244,Gandhinagar,Surat,1899,860,Draft,2026-06-24,2000,Trailer,0.95,long,Gandhinagar→Surat
+TRIP1018,TN05OK4388,DL44421517,Ahmedabad,Gandhinagar,4211,571,Cancelled,2026-06-20,3500,Truck,1.203,long,Ahmedabad→Gandhinagar
+TRIP1019,TN05KY8973,DL83398151,Surat,Gandhinagar,1762,486,Completed,2026-06-30,1000,Mini Truck,1.762,long,Surat→Gandhinagar
+TRIP1020,MH05TN4919,DL57596249,Gandhinagar,Ahmedabad,4884,896,Cancelled,2026-07-10,5000,Truck,0.977,long,Gandhinagar→Ahmedabad
+TRIP1021,GJ02EM4502,DL76498855,Surat,Gandhinagar,2137,415,Dispatched,2026-06-11,2000,Van,1.068,long,Surat→Gandhinagar
+TRIP1022,MH07IE6514,DL72569945,Surat,Gandhinagar,1228,122,Cancelled,2026-07-06,500,Trailer,2.456,medium,Surat→Gandhinagar
+TRIP1023,MH02VL6000,DL14342720,Ahmedabad,Surat,3943,439,Dispatched,2026-07-08,5000,Truck,0.789,long,Ahmedabad→Surat
+TRIP1024,KA14OL1685,DL17739244,Gandhinagar,Surat,1285,685,Draft,2026-06-21,1500,Truck,0.857,long,Gandhinagar→Surat
+TRIP1025,RJ14UU1672,DL82418594,Gandhinagar,Surat,1292,661,Cancelled,2026-06-08,500,Mini Truck,2.584,long,Gandhinagar→Surat
+TRIP1026,MH07IE6514,DL24962050,Ahmedabad,Gandhinagar,340,252,Draft,2026-06-15,500,Trailer,0.68,medium,Ahmedabad→Gandhinagar
+TRIP1027,RJ14FI1916,DL17739244,Surat,Ahmedabad,2795,474,Dispatched,2026-05-29,2000,Mini Truck,1.398,long,Surat→Ahmedabad
+TRIP1028,MH05MW2235,DL14342720,Ahmedabad,Gandhinagar,437,835,Draft,2026-06-24,5000,Truck,0.087,long,Ahmedabad→Gandhinagar
+TRIP1029,RJ05BP9238,DL98294143,Ahmedabad,Surat,1082,563,Cancelled,2026-06-06,1000,Truck,1.082,long,Ahmedabad→Surat
+TRIP1030,RJ14ZP8251,DL17739244,Ahmedabad,Surat,1675,100,Cancelled,2026-06-03,5000,Van,0.335,short,Ahmedabad→Surat
+TRIP1031,RJ14ZP8251,DL57596249,Surat,Ahmedabad,4276,257,Cancelled,2026-06-02,5000,Van,0.855,medium,Surat→Ahmedabad
+TRIP1032,GJ01WB4899,DL26387636,Surat,Ahmedabad,2291,843,Cancelled,2026-06-24,3500,Van,0.655,long,Surat→Ahmedabad
+TRIP1033,RJ14ZP8251,DL83398151,Ahmedabad,Gandhinagar,1494,373,Completed,2026-06-02,5000,Van,0.299,medium,Ahmedabad→Gandhinagar
+TRIP1034,KA01XT3546,DL76498855,Gandhinagar,Surat,2248,223,Cancelled,2026-06-12,5000,Van,0.45,medium,Gandhinagar→Surat
+TRIP1035,RJ14FI1916,DL57596249,Surat,Gandhinagar,1762,608,Completed,2026-05-29,2000,Mini Truck,0.881,long,Surat→Gandhinagar
+TRIP1036,RJ01BS2790,DL53393243,Gandhinagar,Ahmedabad,3442,599,Draft,2026-06-04,3500,Van,0.983,long,Gandhinagar→Ahmedabad
+TRIP1037,KA05TW7865,DL26387636,Ahmedabad,Gandhinagar,1372,244,Dispatched,2026-06-03,1500,Van,0.915,medium,Ahmedabad→Gandhinagar
+TRIP1038,GJ01WB4899,DL82418594,Surat,Ahmedabad,1320,662,Draft,2026-06-23,3500,Van,0.377,long,Surat→Ahmedabad
+TRIP1039,TN05TV5133,DL26387636,Surat,Gandhinagar,473,769,Dispatched,2026-07-07,5000,Truck,0.095,long,Surat→Gandhinagar
