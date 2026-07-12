@@ -1,10 +1,5 @@
-.soft-aurora-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    overflow: hidden;
+/* SoftAurora canvas is mounted directly on document.body via JS.
+   Positioning and sizing are set via inline styles in SoftAurora.jsx. */
+body {
     background-color: #0b0b0f;
 }
