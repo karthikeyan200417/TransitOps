@@ -1,0 +1,43 @@
+.vs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 4px;
+}
+
+.vs-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.vs-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #aaa;
+    width: 72px;
+    flex-shrink: 0;
+}
+
+.vs-bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.vs-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s ease;
+}
+
+.vs-count {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
+}

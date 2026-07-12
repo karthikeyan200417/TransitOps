@@ -4,7 +4,7 @@ import './LoginPage.css';
 import SoftAurora from './SoftAurora';
 import RotatingText from './RotatingText';
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }) {
     const [isSignUp, setIsSignUp] = useState(false);
 
     return (
@@ -88,12 +88,12 @@ export default function LoginPage() {
                     <div className="button-group">
                         {isSignUp ? (
                             <>
-                                <button type="submit" className="submit-btn" onClick={(e) => { e.preventDefault(); }}>Sign Up</button>
+                                <button type="submit" className="submit-btn" onClick={(e) => { e.preventDefault(); onLogin && onLogin(); }}>Sign Up</button>
                                 <button type="button" className="secondary-btn" onClick={() => setIsSignUp(false)}>Back to Sign In</button>
                             </>
                         ) : (
                             <>
-                                <button type="submit" className="submit-btn" onClick={(e) => { e.preventDefault(); }}>Sign In</button>
+                                <button type="submit" className="submit-btn" onClick={(e) => { e.preventDefault(); onLogin && onLogin(); }}>Sign In</button>
                                 <button type="button" className="secondary-btn" onClick={() => setIsSignUp(true)}>Sign Up</button>
                             </>
                         )}
