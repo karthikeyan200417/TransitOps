@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap');
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+.top-left-quote {
+    position: absolute;
+    top: 50px;
+    left: 60px;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 38px;
+    color: #fff;
+    z-index: 5;
+    text-shadow: 0 0 15px rgba(225, 0, 255, 0.4), 0 0 30px rgba(82, 39, 255, 0.6);
+    font-weight: 600;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.purple-box {
+    background-color: #a855f7;
+    padding: 4px 16px;
+    border-radius: 8px;
+    text-shadow: none;
+    box-shadow: 0 4px 15px rgba(225, 0, 255, 0.4);
+}
+
+.bottom-right-quote {
+    position: absolute;
+    bottom: 50px;
+    right: 60px;
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    color: #e2e8f0;
+    max-width: 400px;
+    text-align: right;
+    z-index: 5;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.6;
+    text-shadow: 0 0 12px rgba(225, 0, 255, 0.3);
+}
+
+.rotating-main {
+    overflow: hidden;
+    justify-content: flex-start;
+    display: flex;
+}
+
+.rotating-split {
+    overflow: hidden;
+    padding-bottom: 4px;
+}
+
+.login-form-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 45px 40px;
+    z-index: 10;
+    background: rgba(18, 18, 22, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+.form-title {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 34px;
+    color: #fff;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.form-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    color: #a1a1aa;
+    margin: 8px 0 32px;
+    font-weight: 300;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.input-group select option {
+    color: #000;
+    background: #fff;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border-color: #e100ff;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.input-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px top 50%;
+    background-size: 10px auto;
+}
+
+.button-group {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.submit-btn,
+.secondary-btn {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.submit-btn {
+    background-color: #2563eb;
+    color: white;
+}
+
+.submit-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.secondary-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.submit-btn:active,
+.secondary-btn:active {
+    transform: translateY(1px);
+}
