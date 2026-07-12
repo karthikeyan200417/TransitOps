@@ -1,12 +1,39 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdSearch, MdFilterList, MdSort, MdRefresh, MdDownload, MdAdd,
     MdVisibility, MdEdit, MdDelete, MdBlock, MdCheckCircle, MdClose,
     MdWarning, MdPhone, MdEmail, MdBadge, MdCreditCard
 } from 'react-icons/md';
-import { mockDrivers, licenseCategories, driverStatuses, bloodGroups } from '../data/driversMockData';
+import { driversApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './DriverManagement.css';
+
+const licenseCategories = ['All', 'A', 'B', 'C', 'D', 'E', 'HMV', 'LMV'];
+const driverStatuses    = ['All', 'AVAILABLE', 'ON_TRIP', 'OFF_DUTY', 'SUSPENDED'];
+const bloodGroups       = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+function toUI(d) {
+    return {
+        id: d.id,
+        name: d.name,
+        empId: d.license_number,
+        licenseNumber: d.license_number,
+        licenseCategory: d.license_category,
+        licenseExpiry: d.license_expiry,
+        phone: d.contact_number,
+        email: '',
+        emergencyContact: '',
+        bloodGroup: 'O+',
+        experience: '',
+        joiningDate: '',
+        assignedVehicle: null,
+        safetyScore: parseFloat(d.safety_score),
+        tripCompletionPct: d.trip_completion_pct,
+        status: d.status.charAt(0) + d.status.slice(1).toLowerCase().replace('_', ' '),
+        rawStatus: d.status,
+        photo: null,
+    };
+}
 
 /* ─── Safety Score Bar ─── */
 function SafetyScoreBar({ score }) {
@@ -234,102 +261,116 @@ function DeleteConfirmModal({ driver, onConfirm, onCancel }) {
 const PAGE_SIZE = 5;
 
 export default function DriverManagement({ onNavigate }) {
-    const [drivers, setDrivers] = useState(mockDrivers);
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
+    const [drivers, setDrivers]     = useState([]);
+    const [loading, setLoading]     = useState(true);
+    const [search, setSearch]       = useState('');
+    const [statusFilter, setStatusFilter]   = useState('All');
     const [licenseFilter, setLicenseFilter] = useState('All');
     const [sortBy, setSortBy] = useState('name');
-    const [page, setPage] = useState(1);
+    const [page, setPage]     = useState(1);
 
-    // Modals state
-    const [viewDriver, setViewDriver] = useState(null);
-    const [addOpen, setAddOpen] = useState(false);
-    const [editDriver, setEditDriver] = useState(null);
+    const [viewDriver, setViewDriver]     = useState(null);
+    const [addOpen, setAddOpen]           = useState(false);
+    const [editDriver, setEditDriver]     = useState(null);
     const [deleteDriver, setDeleteDriver] = useState(null);
 
-    // Statistics counts
-    const stats = useMemo(() => {
-        const total = drivers.length;
-        const available = drivers.filter(d => d.status === 'Available').length;
-        const onTrip = drivers.filter(d => d.status === 'On Trip').length;
-        const suspended = drivers.filter(d => d.status === 'Suspended').length;
+    const fetchDrivers = async () => {
+        try {
+            setLoading(true);
+            const data = await driversApi.list();
+            setDrivers(data.map(toUI));
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+    useEffect(() => { fetchDrivers(); }, []);
 
-        // License expiring in next 60 days
+    const stats = useMemo(() => {
+        const total     = drivers.length;
+        const available = drivers.filter(d => d.rawStatus === 'AVAILABLE').length;
+        const onTrip    = drivers.filter(d => d.rawStatus === 'ON_TRIP').length;
+        const suspended = drivers.filter(d => d.rawStatus === 'SUSPENDED').length;
         const expiringSoon = drivers.filter(d => {
             if (!d.licenseExpiry) return false;
             const days = (new Date(d.licenseExpiry) - new Date()) / (1000 * 60 * 60 * 24);
             return days >= 0 && days <= 60;
         }).length;
-
         return { total, available, onTrip, suspended, expiringSoon };
     }, [drivers]);
 
-    // Handle suspended status toggling directly
-    const toggleSuspension = (id) => {
-        setDrivers(prev => prev.map(drv => {
-            if (drv.id === id) {
-                const newStatus = drv.status === 'Suspended' ? 'Available' : 'Suspended';
-                return { ...drv, status: newStatus };
-            }
-            return drv;
-        }));
+    const toggleSuspension = async (id) => {
+        const drv = drivers.find(d => d.id === id);
+        if (!drv) return;
+        const newStatus = drv.rawStatus === 'SUSPENDED' ? 'AVAILABLE' : 'SUSPENDED';
+        try {
+            await driversApi.update(id, { status: newStatus });
+            fetchDrivers();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    // Filter & Sort
     const filteredDrivers = useMemo(() => {
         let list = drivers.filter(d => {
-            const matchSearch = d.name.toLowerCase().includes(search.toLowerCase()) ||
+            const matchSearch  = d.name.toLowerCase().includes(search.toLowerCase()) ||
                 d.empId.toLowerCase().includes(search.toLowerCase()) ||
                 d.phone.includes(search);
-            const matchStatus = statusFilter === 'All' || d.status === statusFilter;
+            const matchStatus  = statusFilter === 'All' || d.rawStatus === statusFilter;
             const matchLicense = licenseFilter === 'All' || d.licenseCategory === licenseFilter;
             return matchSearch && matchStatus && matchLicense;
         });
-
-        if (sortBy === 'name') {
-            list.sort((a, b) => a.name.localeCompare(b.name));
-        } else if (sortBy === 'score') {
-            list.sort((a, b) => b.safetyScore - a.safetyScore);
-        } else if (sortBy === 'expiry') {
-            list.sort((a, b) => new Date(a.licenseExpiry) - new Date(b.licenseExpiry));
-        }
+        if (sortBy === 'name')   list.sort((a, b) => a.name.localeCompare(b.name));
+        if (sortBy === 'score')  list.sort((a, b) => b.safetyScore - a.safetyScore);
+        if (sortBy === 'expiry') list.sort((a, b) => new Date(a.licenseExpiry) - new Date(b.licenseExpiry));
         return list;
     }, [drivers, search, statusFilter, licenseFilter, sortBy]);
 
     const totalPages = Math.max(1, Math.ceil(filteredDrivers.length / PAGE_SIZE));
-    const paginated = filteredDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const paginated  = filteredDrivers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    // CRUD handlers
-    const handleAddNew = (newDrv) => {
-        const fresh = { ...newDrv, id: Date.now() };
-        setDrivers(prev => [fresh, ...prev]);
-        setAddOpen(false);
+    const handleAddNew = async (newDrv) => {
+        try {
+            await driversApi.create({
+                name: newDrv.name,
+                license_number: newDrv.licenseNumber,
+                license_category: newDrv.licenseCategory,
+                license_expiry: newDrv.licenseExpiry,
+                contact_number: newDrv.phone,
+                safety_score: parseFloat(newDrv.safetyScore) || 100,
+                trip_completion_pct: parseInt(newDrv.tripCompletionPct) || 100,
+                status: 'AVAILABLE',
+            });
+            setAddOpen(false); fetchDrivers();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleEditSave = (updated) => {
-        setDrivers(prev => prev.map(d => d.id === editDriver.id ? updated : d));
-        setEditDriver(null);
+    const handleEditSave = async (updated) => {
+        try {
+            await driversApi.update(editDriver.id, {
+                name: updated.name,
+                license_category: updated.licenseCategory,
+                license_expiry: updated.licenseExpiry,
+                contact_number: updated.phone,
+                safety_score: parseFloat(updated.safetyScore),
+                status: updated.rawStatus || 'AVAILABLE',
+            });
+            setEditDriver(null); fetchDrivers();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleDeleteConfirm = () => {
-        setDrivers(prev => prev.filter(d => d.id !== deleteDriver.id));
-        setDeleteDriver(null);
-        if (paginated.length === 1 && page > 1) {
-            setPage(p => p - 1);
-        }
+    const handleDeleteConfirm = async () => {
+        try {
+            await driversApi.delete(deleteDriver.id);
+            setDeleteDriver(null);
+            if (paginated.length === 1 && page > 1) setPage(p => p - 1);
+            fetchDrivers();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
     const resetFilters = () => {
-        setSearch('');
-        setStatusFilter('All');
-        setLicenseFilter('All');
-        setSortBy('name');
-        setPage(1);
+        setSearch(''); setStatusFilter('All'); setLicenseFilter('All'); setSortBy('name'); setPage(1);
     };
 
     const exportCSV = () => {
-        const headers = ['Name', 'Employee ID', 'License Number', 'License Category', 'License Expiry', 'Phone', 'Safety Score', 'Status', 'Assigned Vehicle'];
-        const rows = filteredDrivers.map(d => [d.name, d.empId, d.licenseNumber, d.licenseCategory, d.licenseExpiry, d.phone, d.safetyScore, d.status, d.assignedVehicle]);
+        const headers = ['Name', 'Employee ID', 'License Number', 'License Category', 'License Expiry', 'Phone', 'Safety Score', 'Status'];
+        const rows = filteredDrivers.map(d => [d.name, d.empId, d.licenseNumber, d.licenseCategory, d.licenseExpiry, d.phone, d.safetyScore, d.status]);
         const csvContent = [headers, ...rows].map(row => row.map(value => `"${value}"`).join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');

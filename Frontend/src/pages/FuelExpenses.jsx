@@ -1,17 +1,50 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdSearch, MdFilterList, MdRefresh, MdAdd, MdClose, MdLocalGasStation,
     MdAttachMoney, MdDirectionsBus, MdPerson, MdCalendarToday, MdShield,
     MdConfirmationNumber, MdReceipt, MdDelete
 } from 'react-icons/md';
-import {
-    mockFuelLogs, mockExpenses, expenseCategories,
-    expenseStatuses, fuelStationsList, expenseApprovedList
-} from '../data/fuelExpensesMockData';
-import { mockVehicles } from '../data/fleetMockData';
-import { mockDrivers } from '../data/driversMockData';
+import { fuelApi, expensesApi, vehiclesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './FuelExpenses.css';
+
+const expenseCategories  = ['All', 'FUEL', 'TOLL', 'REPAIR', 'INSURANCE', 'SALARY', 'PARKING', 'OTHER'];
+const expenseStatuses    = ['All', 'PENDING', 'APPROVED', 'REJECTED'];
+const fuelStationsList   = ['All'];
+const expenseApprovedList = [];
+
+function fuelToUI(f) {
+    return {
+        id: f.id,
+        vehicle: f.vehicle?.registration_number || f.vehicle_id,
+        vehicleId: f.vehicle_id,
+        driver: f.driver_id || '—',
+        litres: parseFloat(f.quantity_litres),
+        cost: parseFloat(f.total_cost),
+        pricePerLitre: parseFloat(f.price_per_litre),
+        fuelStation: f.station_name || 'N/A',
+        date: f.fill_date,
+        odometer: parseFloat(f.odometer_reading),
+        receiptNumber: f.receipt_number || '',
+    };
+}
+
+function expenseToUI(e) {
+    return {
+        id: e.id,
+        vehicle: e.vehicle?.registration_number || e.vehicle_id || '—',
+        vehicleId: e.vehicle_id,
+        description: e.description,
+        expenseType: e.expense_type,
+        amount: parseFloat(e.amount),
+        date: e.expense_date,
+        status: e.status.charAt(0) + e.status.slice(1).toLowerCase(),
+        rawStatus: e.status,
+        approvedBy: e.approved_by || '',
+        receiptNumber: e.receipt_number || '',
+    };
+}
+
 
 /* ─── Expense Status Badge ─── */
 function StatusBadge({ status }) {
@@ -198,96 +231,106 @@ function AddExpenseModal({ onSave, onClose }) {
 export default function FuelExpenses({ onNavigate }) {
     const [activeTab, setActiveTab] = useState('Fuel Logs');
 
-    // States
-    const [fuelLogs, setFuelLogs] = useState(mockFuelLogs);
-    const [expenses, setExpenses] = useState(mockExpenses);
+    const [fuelLogs, setFuelLogs]   = useState([]);
+    const [expenses, setExpenses]   = useState([]);
+    const [loading, setLoading]     = useState(true);
 
-    const [search, setSearch] = useState('');
+    const [search, setSearch]               = useState('');
     const [stationFilter, setStationFilter] = useState('All');
     const [expenseTypeFilter, setExpenseTypeFilter] = useState('All');
 
-    // Modal displays
-    const [fuelModalOpen, setFuelModalOpen] = useState(false);
+    const [fuelModalOpen, setFuelModalOpen]       = useState(false);
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
 
-    // Compute stat widgets
-    const fuelStats = useMemo(() => {
-        const totalLitres = fuelLogs.reduce((sum, f) => sum + f.litres, 0);
-        const totalCost = fuelLogs.reduce((sum, f) => sum + f.cost, 0);
-        const avgCostPerLitre = totalLitres > 0 ? (totalCost / totalLitres).toFixed(2) : 0;
-        const refuelsCount = fuelLogs.length;
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [fl, ex] = await Promise.all([fuelApi.list(), expensesApi.list()]);
+            setFuelLogs(fl.map(fuelToUI));
+            setExpenses(ex.map(expenseToUI));
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+    useEffect(() => { fetchData(); }, []);
 
-        return { totalLitres, totalCost, avgCostPerLitre, refuelsCount };
-    }, [fuelLogs]);
+    const fuelStats = useMemo(() => ({
+        totalLitres:    fuelLogs.reduce((s, f) => s + f.litres, 0),
+        totalCost:      fuelLogs.reduce((s, f) => s + f.cost, 0),
+        avgCostPerLitre: fuelLogs.length > 0
+            ? (fuelLogs.reduce((s, f) => s + f.cost, 0) / fuelLogs.reduce((s, f) => s + f.litres, 0)).toFixed(2)
+            : 0,
+        refuelsCount:   fuelLogs.length,
+    }), [fuelLogs]);
 
-    const expenseStats = useMemo(() => {
-        const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-        const approved = expenses.filter(e => e.status === 'Approved').length;
-        const pending = expenses.filter(e => e.status === 'Pending').length;
+    const expenseStats = useMemo(() => ({
+        totalSpent: expenses.reduce((s, e) => s + e.amount, 0),
+        approved:   expenses.filter(e => e.rawStatus === 'APPROVED').length,
+        pending:    expenses.filter(e => e.rawStatus === 'PENDING').length,
+        toll:       expenses.filter(e => e.expenseType === 'TOLL').reduce((s, e) => s + e.amount, 0),
+        insurance:  expenses.filter(e => e.expenseType === 'INSURANCE').reduce((s, e) => s + e.amount, 0),
+    }), [expenses]);
 
-        // Toll and Insurance specific sums
-        const toll = expenses.filter(e => e.expenseType === 'Toll Charges').reduce((s, e) => s + e.amount, 0);
-        const insurance = expenses.filter(e => e.expenseType === 'Insurance Premium').reduce((s, e) => s + e.amount, 0);
-
-        return { totalSpent, approved, pending, toll, insurance };
-    }, [expenses]);
-
-    // Actions
-    const handleAddFuel = (entry) => {
-        const fresh = { ...entry, id: `FL-${Date.now().toString().slice(-3)}` };
-        setFuelLogs(prev => [fresh, ...prev]);
-        setFuelModalOpen(false);
+    const handleAddFuel = async (entry) => {
+        try {
+            await fuelApi.create({
+                vehicle_id: entry.vehicleId,
+                quantity_litres: parseFloat(entry.litres),
+                price_per_litre: parseFloat(entry.pricePerLitre),
+                total_cost: parseFloat(entry.cost),
+                station_name: entry.fuelStation,
+                fill_date: entry.date,
+                odometer_reading: parseFloat(entry.odometer) || 0,
+                receipt_number: entry.receiptNumber,
+            });
+            setFuelModalOpen(false);
+            fetchData();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleAddExpense = (entry) => {
-        const fresh = { ...entry, id: `EXP-${Date.now().toString().slice(-3)}` };
-        setExpenses(prev => [fresh, ...prev]);
-        setExpenseModalOpen(false);
+    const handleAddExpense = async (entry) => {
+        try {
+            await expensesApi.create({
+                vehicle_id: entry.vehicleId || null,
+                expense_type: entry.expenseType,
+                description: entry.description,
+                amount: parseFloat(entry.amount),
+                expense_date: entry.date,
+                receipt_number: entry.receiptNumber,
+                status: 'PENDING',
+            });
+            setExpenseModalOpen(false);
+            fetchData();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const toggleExpenseApproval = (id) => {
-        setExpenses(prev => prev.map(e => {
-            if (e.id === id) {
-                const nextStatus = e.status === 'Pending' ? 'Approved' : 'Pending';
-                return { ...e, status: nextStatus };
-            }
-            return e;
-        }));
+    const deleteFuelLog = async (id) => {
+        // Fuel logs don't have a delete endpoint — show notice
+        alert('Fuel logs cannot be deleted once recorded.');
     };
 
-    const deleteFuelLog = (id) => {
-        setFuelLogs(prev => prev.filter(f => f.id !== id));
+    const deleteExpense = async (id) => {
+        alert('Expenses cannot be deleted once recorded.');
     };
 
-    const deleteExpense = (id) => {
-        setExpenses(prev => prev.filter(e => e.id !== id));
-    };
+    const handleRefresh = () => { fetchData(); setSearch(''); setStationFilter('All'); setExpenseTypeFilter('All'); };
 
-    const handleRefresh = () => {
-        setSearch('');
-        setStationFilter('All');
-        setExpenseTypeFilter('All');
-    };
-
-    // Filter fuel logs
     const filteredFuelLogs = useMemo(() => {
         return fuelLogs.filter(f => {
-            const matchSearch = f.vehicle.toLowerCase().includes(search.toLowerCase()) ||
-                f.driver.toLowerCase().includes(search.toLowerCase());
+            const matchSearch  = f.vehicle.toLowerCase().includes(search.toLowerCase());
             const matchStation = stationFilter === 'All' || f.fuelStation === stationFilter;
             return matchSearch && matchStation;
         });
     }, [fuelLogs, search, stationFilter]);
 
-    // Filter expenses
     const filteredExpenses = useMemo(() => {
         return expenses.filter(e => {
-            const matchSearch = e.vehicle.toLowerCase().includes(search.toLowerCase()) ||
+            const matchSearch   = e.vehicle.toLowerCase().includes(search.toLowerCase()) ||
                 e.description.toLowerCase().includes(search.toLowerCase());
             const matchCategory = expenseTypeFilter === 'All' || e.expenseType === expenseTypeFilter;
             return matchSearch && matchCategory;
         });
     }, [expenses, search, expenseTypeFilter]);
+
 
     return (
         <div className="fuel-expenses-page">

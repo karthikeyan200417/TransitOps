@@ -1,14 +1,40 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdSearch, MdFilterList, MdRefresh, MdAdd, MdVisibility, MdEdit,
     MdPlayArrow, MdCheckCircle, MdCancel, MdClose, MdWarning,
     MdLocationOn, MdDirectionsBus, MdPerson, MdCalendarToday, MdScale, MdTimeline
 } from 'react-icons/md';
-import { mockTrips, tripStatuses, cargoTypes, tripPriorities } from '../data/tripsMockData';
-import { mockVehicles } from '../data/fleetMockData';
-import { mockDrivers } from '../data/driversMockData';
+import { tripsApi, vehiclesApi, driversApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './TripManagement.css';
+
+const cargoTypes    = ['Consumables', 'Electronics', 'Machinery', 'Chemicals', 'Textiles', 'Perishables', 'Fragile', 'Other'];
+const tripStatuses  = ['All', 'DRAFT', 'DISPATCHED', 'COMPLETED', 'CANCELLED'];
+const tripPriorities = ['Low', 'Medium', 'High', 'Critical'];
+
+function toUI(t) {
+    return {
+        id: t.id,
+        tripCode: t.trip_code,
+        source: t.origin,
+        destination: t.destination,
+        vehicle: t.vehicle_id,
+        vehicleReg: t.vehicle?.registration_number || t.vehicle_id,
+        driver: t.driver_id,
+        driverName: t.driver?.name || t.driver_id,
+        cargoWeight: t.cargo_weight_kg,
+        cargoType: t.cargo_type || 'General',
+        distance: t.distance_km,
+        startDate: t.start_time,
+        estimatedArrival: t.estimated_arrival,
+        eta: t.estimated_arrival,
+        status: t.status.charAt(0) + t.status.slice(1).toLowerCase(),
+        rawStatus: t.status,
+        priority: 'Medium',
+        remarks: t.notes || '',
+        timeline: [],
+    };
+}
 
 /* ─── Trip Status Badge ─── */
 function StatusBadge({ status }) {
@@ -138,7 +164,7 @@ const DEFAULT_TRIP = {
     priority: 'Medium', cargoType: 'Consumables', remarks: '', status: 'Draft'
 };
 
-function AddEditTripModal({ initial, onSave, onClose }) {
+function AddEditTripModal({ initial, onSave, onClose, vehicles = [], drivers = [] }) {
     const [form, setForm] = useState(initial || DEFAULT_TRIP);
     const isEdit = !!initial;
 
@@ -190,9 +216,9 @@ function AddEditTripModal({ initial, onSave, onClose }) {
                     <div className="form-field">
                         <label>Select Vehicle *</label>
                         <select value={form.vehicle} onChange={e => setField('vehicle', e.target.value)}>
-                            <option value="">-- Choose HMV --</option>
-                            {mockVehicles.map(v => (
-                                <option key={v.id} value={v.regNumber}>{v.regNumber} ({v.model})</option>
+                            <option value="">-- Choose Vehicle --</option>
+                            {vehicles.map(v => (
+                                <option key={v.id} value={v.id}>{v.registration_number} ({v.name_model})</option>
                             ))}
                         </select>
                     </div>
@@ -200,9 +226,9 @@ function AddEditTripModal({ initial, onSave, onClose }) {
                     <div className="form-field">
                         <label>Select Driver *</label>
                         <select value={form.driver} onChange={e => setField('driver', e.target.value)}>
-                            <option value="">-- Choose Operator --</option>
-                            {mockDrivers.map(d => (
-                                <option key={d.id} value={d.name}>{d.name} ({d.empId})</option>
+                            <option value="">-- Choose Driver --</option>
+                            {drivers.map(d => (
+                                <option key={d.id} value={d.id}>{d.name} ({d.license_number})</option>
                             ))}
                         </select>
                     </div>
@@ -258,86 +284,96 @@ function AddEditTripModal({ initial, onSave, onClose }) {
 }
 
 export default function TripManagement({ onNavigate }) {
-    const [trips, setTrips] = useState(mockTrips);
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
+    const [trips, setTrips]       = useState([]);
+    const [vehicles, setVehicles] = useState([]);
+    const [drivers, setDrivers]   = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [search, setSearch]         = useState('');
+    const [statusFilter, setStatusFilter]   = useState('All');
     const [vehicleFilter, setVehicleFilter] = useState('All');
-    const [driverFilter, setDriverFilter] = useState('All');
+    const [driverFilter, setDriverFilter]   = useState('All');
 
-    // Modal open states
-    const [viewTrip, setViewTrip] = useState(null);
+    const [viewTrip, setViewTrip]   = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [editTrip, setEditTrip] = useState(null);
+    const [editTrip, setEditTrip]   = useState(null);
 
-    // Statistics computes
-    const stats = useMemo(() => {
-        return {
-            active: trips.filter(t => t.status === 'On Trip' || t.status === 'Dispatched').length,
-            completed: trips.filter(t => t.status === 'Completed').length,
-            pending: trips.filter(t => t.status === 'Draft').length,
-            cancelled: trips.filter(t => t.status === 'Cancelled').length,
-            total: trips.length
-        };
-    }, [trips]);
+    const fetchAll = async () => {
+        try {
+            setLoading(true);
+            const [t, v, d] = await Promise.all([
+                tripsApi.list(),
+                vehiclesApi.list(),
+                driversApi.list(),
+            ]);
+            setTrips(t.map(toUI));
+            setVehicles(v);
+            setDrivers(d);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+    useEffect(() => { fetchAll(); }, []);
 
-    // Operational trigger handlers
-    const handleDispatch = (id) => {
-        const rightNow = new Date().toISOString().replace('T', ' ').substring(0, 16);
-        setTrips(prev => prev.map(t => {
-            if (t.id === id) {
-                return {
-                    ...t,
-                    status: 'Dispatched',
-                    timeline: [...t.timeline, { status: 'Dispatched', time: rightNow, desc: 'Dispatched directly from control board.' }]
-                };
-            }
-            return t;
-        }));
+    const stats = useMemo(() => ({
+        active:    trips.filter(t => t.rawStatus === 'DISPATCHED').length,
+        completed: trips.filter(t => t.rawStatus === 'COMPLETED').length,
+        pending:   trips.filter(t => t.rawStatus === 'DRAFT').length,
+        cancelled: trips.filter(t => t.rawStatus === 'CANCELLED').length,
+        total:     trips.length,
+    }), [trips]);
+
+    const handleDispatch = async (id) => {
+        try {
+            await tripsApi.update(id, { status: 'DISPATCHED' });
+            fetchAll();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleComplete = (id) => {
-        const rightNow = new Date().toISOString().replace('T', ' ').substring(0, 16);
-        setTrips(prev => prev.map(t => {
-            if (t.id === id) {
-                return {
-                    ...t,
-                    status: 'Completed',
-                    timeline: [...t.timeline, { status: 'Completed', time: rightNow, desc: 'Cargo offloaded. Delivery confirmation uploaded.' }]
-                };
-            }
-            return t;
-        }));
+    const handleComplete = async (id) => {
+        try {
+            await tripsApi.complete(id, { end_odometer: 0 });
+            fetchAll();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleCancelTrip = (id) => {
-        const rightNow = new Date().toISOString().replace('T', ' ').substring(0, 16);
-        setTrips(prev => prev.map(t => {
-            if (t.id === id) {
-                return {
-                    ...t,
-                    status: 'Cancelled',
-                    timeline: [...t.timeline, { status: 'Cancelled', time: rightNow, desc: 'Trip cancelled by operational dispatcher.' }]
-                };
-            }
-            return t;
-        }));
+    const handleCancelTrip = async (id) => {
+        try {
+            await tripsApi.update(id, { status: 'CANCELLED' });
+            fetchAll();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    // CRUD actions
-    const handleCreate = (data) => {
-        const newTrip = {
-            ...data,
-            id: `TRP-${Date.now().toString().slice(-4)}`,
-            eta: data.estimatedArrival || '—'
-        };
-        setTrips(prev => [newTrip, ...prev]);
-        setModalOpen(false);
+    const handleCreate = async (data) => {
+        try {
+            await tripsApi.dispatch({
+                origin: data.source,
+                destination: data.destination,
+                vehicle_id: data.vehicle,
+                driver_id: data.driver,
+                cargo_weight_kg: parseFloat(data.cargoWeight) || 0,
+                cargo_type: data.cargoType,
+                distance_km: parseFloat(data.distance) || 0,
+                start_time: data.startDate,
+                estimated_arrival: data.estimatedArrival,
+                notes: data.remarks,
+            });
+            setModalOpen(false);
+            fetchAll();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleEditSave = (data) => {
-        setTrips(prev => prev.map(t => t.id === editTrip.id ? { ...t, ...data, eta: data.estimatedArrival || '—' } : t));
-        setEditTrip(null);
+    const handleEditSave = async (data) => {
+        try {
+            await tripsApi.update(editTrip.id, {
+                origin: data.source,
+                destination: data.destination,
+                notes: data.remarks,
+            });
+            setEditTrip(null);
+            fetchAll();
+        } catch (e) { alert('Error: ' + e.message); }
     };
+
+
 
     const handleRefresh = () => {
         setSearch('');
@@ -508,6 +544,8 @@ export default function TripManagement({ onNavigate }) {
                     initial={editTrip}
                     onSave={editTrip ? handleEditSave : handleCreate}
                     onClose={() => { setModalOpen(false); setEditTrip(null); }}
+                    vehicles={vehicles}
+                    drivers={drivers}
                 />
             )}
         </div>

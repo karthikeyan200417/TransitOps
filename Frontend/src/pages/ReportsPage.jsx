@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     MdTimeline, MdTrendingUp, MdLeaderboard, MdList, MdDownload,
     MdAttachMoney, MdDirectionsBus, MdPerson, MdLocalGasStation, MdBuild, MdTimer
 } from 'react-icons/md';
-import { mockAnalyticsData, documentReports } from '../data/reportsMockData';
+import { analyticsApi, auditApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './ReportsPage.css';
+
 
 /* ─── Custom Responsive SVG Pie/Donut Chart ─── */
 function DonutChart({ data }) {
@@ -166,18 +167,81 @@ function ExpensesBarChart({ data }) {
 }
 
 export default function ReportsPage({ onNavigate }) {
-    const [reports, setReports] = useState(documentReports);
+    const [reports, setReports]         = useState([]);
+    const [fleetData, setFleetData]     = useState(null);
+    const [fuelData, setFuelData]       = useState(null);
+    const [expenseData, setExpenseData] = useState(null);
+    const [tripData, setTripData]       = useState(null);
+    const [loading, setLoading]         = useState(true);
+
+    useEffect(() => {
+        async function load() {
+            try {
+                const [fleet, fuel, expense, trip, audit] = await Promise.all([
+                    analyticsApi.fleetUtilization().catch(() => null),
+                    analyticsApi.fuelEfficiency().catch(() => null),
+                    analyticsApi.expenses().catch(() => null),
+                    analyticsApi.trips().catch(() => null),
+                    auditApi.list(null, null, 20).catch(() => ({ logs: [] })),
+                ]);
+                setFleetData(fleet);
+                setFuelData(fuel);
+                setExpenseData(expense);
+                setTripData(trip);
+                // Build report archive from audit logs
+                if (audit?.logs) {
+                    setReports(audit.logs.slice(0, 8).map((log, i) => ({
+                        id: `AUD-${String(i + 1).padStart(3, '0')}`,
+                        title: `${log.action} on ${log.table_name}`,
+                        format: 'JSON',
+                        date: log.created_at?.split('T')[0] || '—',
+                        author: log.user_id || 'System',
+                    })));
+                }
+            } catch (e) { console.error(e); }
+            finally { setLoading(false); }
+        }
+        load();
+    }, []);
+
+    // Build chart-friendly structures from real data
+    const utilizationChart = fleetData ? {
+        labels: ['Available', 'On Trip', 'In Shop', 'Retired'],
+        values: [
+            fleetData.available_vehicles || 0,
+            fleetData.on_trip_vehicles   || 0,
+            fleetData.in_shop_vehicles   || 0,
+            (fleetData.total_vehicles || 0) - (fleetData.available_vehicles || 0) - (fleetData.on_trip_vehicles || 0) - (fleetData.in_shop_vehicles || 0),
+        ],
+        colors: ['#00D2A0', '#4F8CFF', '#FF9F43', '#FF6B9D'],
+    } : { labels: [], values: [], colors: [] };
+
+    const fuelChartData = fuelData?.monthly_trends
+        ? fuelData.monthly_trends.map(m => ({ month: m.month, value: m.total_cost, color: '#4F8CFF' }))
+        : [];
+
+    const expenseChartData = expenseData?.by_category
+        ? expenseData.by_category.map((c, i) => ({
+            category: c.expense_type,
+            amount: c.total,
+            color: ['#6D4AFF', '#4F8CFF', '#00D2A0', '#FF9F43', '#FF6B9D'][i % 5],
+        }))
+        : [];
+
+    // Leaderboard stubs (build from fleet/trip data if available)
+    const driverLeaderboard = tripData?.top_drivers || [];
+    const vehicleLeaderboard = fleetData?.top_vehicles || [];
 
     const triggerDownload = (report) => {
-        alert(`Initiating secure local download interface:\nDocument: ${report.title}\nFormat: ${report.format}\nStatus: Verified Complete`);
+        alert(`Download: ${report.title}\nFormat: ${report.format}`);
     };
 
     const generatePDFExport = () => {
-        alert("Compiling current screen metrics into standard ERP PDF Report format...");
+        alert('Compiling current screen metrics into standard ERP PDF Report format...');
     };
 
     const generateCSVExport = () => {
-        alert("Consolidating core database entries. Exporting comprehensive report database file...");
+        alert('Consolidating core database entries. Exporting comprehensive report database file...');
     };
 
     return (
@@ -230,19 +294,19 @@ export default function ReportsPage({ onNavigate }) {
                     <div className="chart-card">
                         <h3><MdTrendingUp /> Fleet Utilization Breakdown</h3>
                         <p className="chart-sub">Share of operations time classified by vehicle usage categories.</p>
-                        <DonutChart data={mockAnalyticsData.utilization} />
+                        <DonutChart data={utilizationChart} />
                     </div>
 
                     <div className="chart-card">
                         <h3><MdLocalGasStation /> Fuel Cost Trends (6 Months)</h3>
                         <p className="chart-sub">Development of aggregate invoice billing on fuel refills.</p>
-                        <LineAreaChart data={mockAnalyticsData.fuelConsumption} />
+                        <LineAreaChart data={fuelChartData} />
                     </div>
 
                     <div className="chart-card">
                         <h3><MdAttachMoney /> Expenditures breakdown by category</h3>
                         <p className="chart-sub">Consolidated operational spending profiles for July 2026.</p>
-                        <ExpensesBarChart data={mockAnalyticsData.monthlyExpenses} />
+                        <ExpensesBarChart data={expenseChartData} />
                     </div>
                 </div>
 
@@ -252,18 +316,20 @@ export default function ReportsPage({ onNavigate }) {
                         <h3><MdPerson /> Drivers Leaderboard</h3>
                         <p className="chart-sub">Top operating personnel ranked by mileage safety metrics.</p>
                         <div className="leader-list">
-                            {mockAnalyticsData.leaderboardDrivers.map(drv => (
-                                <div className="leader-row" key={drv.rank}>
-                                    <span className="lead-rank">#{drv.rank}</span>
+                            {driverLeaderboard.length > 0 ? driverLeaderboard.map((drv, i) => (
+                                <div className="leader-row" key={i}>
+                                    <span className="lead-rank">#{i + 1}</span>
                                     <div className="lead-name-block">
-                                        <strong className="lead-main-lbl">{drv.name}</strong>
-                                        <span className="lead-sub-lbl">{drv.trips} route runscompleted</span>
+                                        <strong className="lead-main-lbl">{drv.name || drv.driver_name}</strong>
+                                        <span className="lead-sub-lbl">{drv.trips || drv.completed_trips} trips completed</span>
                                     </div>
-                                    <span className="lead-metric-badge" style={{ color: drv.score >= 90 ? '#00D2A0' : '#4F8CFF' }}>
-                                        {drv.score} Safety
+                                    <span className="lead-metric-badge" style={{ color: (drv.score || drv.safety_score) >= 90 ? '#00D2A0' : '#4F8CFF' }}>
+                                        {drv.score || drv.safety_score} Safety
                                     </span>
                                 </div>
-                            ))}
+                            )) : (
+                                <div style={{ color: '#666', padding: '12px', fontSize: '13px' }}>No driver data yet.</div>
+                            )}
                         </div>
                     </div>
 
@@ -271,16 +337,18 @@ export default function ReportsPage({ onNavigate }) {
                         <h3><MdDirectionsBus /> High-Utilization Vehicles</h3>
                         <p className="chart-sub">High mileage asset run hours compiled since service registration.</p>
                         <div className="leader-list">
-                            {mockAnalyticsData.leaderboardVehicles.map(veh => (
-                                <div className="leader-row" key={veh.rank}>
-                                    <span className="lead-rank">#{veh.rank}</span>
+                            {vehicleLeaderboard.length > 0 ? vehicleLeaderboard.map((veh, i) => (
+                                <div className="leader-row" key={i}>
+                                    <span className="lead-rank">#{i + 1}</span>
                                     <div className="lead-name-block">
-                                        <strong className="lead-main-lbl">{veh.regNumber}</strong>
-                                        <span className="lead-sub-lbl">{veh.type} — {veh.distanceCovered} km logged</span>
+                                        <strong className="lead-main-lbl">{veh.registration_number || veh.regNumber}</strong>
+                                        <span className="lead-sub-lbl">{veh.type} — {veh.total_distance || veh.distanceCovered} km</span>
                                     </div>
-                                    <span className="lead-util-time"><MdTimer /> {veh.utilizationHrs} hrs</span>
+                                    <span className="lead-util-time"><MdTimer /> {veh.trips || veh.utilizationHrs} trips</span>
                                 </div>
-                            ))}
+                            )) : (
+                                <div style={{ color: '#666', padding: '12px', fontSize: '13px' }}>No vehicle data yet.</div>
+                            )}
                         </div>
                     </div>
                 </div>

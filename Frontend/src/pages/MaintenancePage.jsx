@@ -1,16 +1,40 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdSearch, MdFilterList, MdRefresh, MdAdd, MdVisibility, MdEdit,
     MdCheckCircle, MdClose, MdWarning, MdBuild, MdAttachMoney,
     MdPerson, MdHomeRepairService, MdCalendarToday
 } from 'react-icons/md';
-import {
-    mockMaintenances, maintenanceTypes, maintenanceStatuses,
-    maintenancePriorities, mechanicsList, garagesList
-} from '../data/maintenanceMockData';
-import { mockVehicles } from '../data/fleetMockData';
+import { maintenanceApi, vehiclesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './MaintenancePage.css';
+
+const maintenanceTypes      = ['All', 'PREVENTIVE', 'CORRECTIVE', 'INSPECTION', 'EMERGENCY'];
+const maintenanceStatuses   = ['All', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const maintenancePriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+const mechanicsList         = ['All'];
+const garagesList           = [];
+
+function toUI(r) {
+    return {
+        id: r.id,
+        vehicle: r.vehicle_id,
+        vehicleReg: r.vehicle?.registration_number || r.vehicle_id,
+        maintenanceType: r.maintenance_type,
+        status: r.status.charAt(0) + r.status.slice(1).toLowerCase().replace('_', ' '),
+        rawStatus: r.status,
+        description: r.description,
+        mechanic: r.technician_name || 'N/A',
+        garage: r.service_center || 'N/A',
+        scheduledDate: r.scheduled_date,
+        completedDate: r.completion_date,
+        estimatedCost: parseFloat(r.estimated_cost) || 0,
+        actualCost: parseFloat(r.actual_cost) || 0,
+        priority: r.priority,
+        parts: r.parts_used || '',
+        notes: r.notes || '',
+    };
+}
+
 
 /* ─── Maintenance Status Badge ─── */
 function StatusBadge({ status }) {
@@ -260,66 +284,100 @@ function CloseRepairModal({ record, onConfirm, onCancel }) {
 }
 
 export default function MaintenancePage({ onNavigate }) {
-    const [records, setRecords] = useState(mockMaintenances);
-    const [search, setSearch] = useState('');
-    const [typeFilter, setTypeFilter] = useState('All');
+    const [records, setRecords]   = useState([]);
+    const [vehicles, setVehicles] = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [search, setSearch]         = useState('');
+    const [typeFilter, setTypeFilter]     = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [mechanicFilter, setMechanicFilter] = useState('All');
 
-    // Modals state
-    const [viewRecord, setViewRecord] = useState(null);
-    const [addOpen, setAddOpen] = useState(false);
-    const [editRecord, setEditRecord] = useState(null);
+    const [viewRecord, setViewRecord]   = useState(null);
+    const [addOpen, setAddOpen]         = useState(false);
+    const [editRecord, setEditRecord]   = useState(null);
     const [closeRecord, setCloseRecord] = useState(null);
 
-    // Statistics
-    const stats = useMemo(() => {
-        const active = records.filter(r => r.status === 'In Progress').length;
-        const scheduled = records.filter(r => r.status === 'Scheduled').length;
-        const completed = records.filter(r => r.status === 'Completed').length;
-        const totalCost = records.reduce((sum, r) => sum + (r.actualCost || r.estimatedCost || 0), 0);
-        return { active, scheduled, completed, totalCost };
-    }, [records]);
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [m, v] = await Promise.all([maintenanceApi.list(), vehiclesApi.list()]);
+            setRecords(m.map(toUI));
+            setVehicles(v);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+    useEffect(() => { fetchData(); }, []);
 
-    // CRUD actions
-    const handleAddNew = (data) => {
-        const newLog = {
-            ...data,
-            id: `MNT-${Date.now().toString().slice(-3)}`,
-            actualCost: 0
-        };
-        setRecords(prev => [newLog, ...prev]);
-        setAddOpen(false);
+    const stats = useMemo(() => ({
+        active:    records.filter(r => r.rawStatus === 'IN_PROGRESS').length,
+        scheduled: records.filter(r => r.rawStatus === 'SCHEDULED').length,
+        completed: records.filter(r => r.rawStatus === 'COMPLETED').length,
+        totalCost: records.reduce((s, r) => s + (r.actualCost || r.estimatedCost || 0), 0),
+    }), [records]);
+
+    const handleAddNew = async (data) => {
+        try {
+            await maintenanceApi.create({
+                vehicle_id: data.vehicle,
+                maintenance_type: data.maintenanceType,
+                description: data.description,
+                scheduled_date: data.scheduledDate,
+                estimated_cost: parseFloat(data.estimatedCost) || 0,
+                priority: data.priority || 'MEDIUM',
+                technician_name: data.mechanic,
+                service_center: data.garage,
+                notes: data.notes,
+                status: 'SCHEDULED',
+            });
+            setAddOpen(false);
+            fetchData();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleEditSave = (data) => {
-        setRecords(prev => prev.map(r => r.id === editRecord.id ? { ...r, ...data } : r));
-        setEditRecord(null);
+    const handleEditSave = async (data) => {
+        try {
+            await maintenanceApi.update(editRecord.id, {
+                description: data.description,
+                estimated_cost: parseFloat(data.estimatedCost),
+                actual_cost: parseFloat(data.actualCost),
+                technician_name: data.mechanic,
+                service_center: data.garage,
+                notes: data.notes,
+                status: data.rawStatus || data.status.toUpperCase().replace(' ', '_'),
+            });
+            setEditRecord(null);
+            fetchData();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleCloseResolve = (closedData) => {
-        setRecords(prev => prev.map(r => r.id === closedData.id ? closedData : r));
-        setCloseRecord(null);
+    const handleCloseResolve = async (closedData) => {
+        try {
+            await maintenanceApi.update(closedData.id, {
+                status: 'COMPLETED',
+                actual_cost: parseFloat(closedData.actualCost),
+                completion_date: new Date().toISOString().split('T')[0],
+            });
+            setCloseRecord(null);
+            fetchData();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
     const resetFilters = () => {
-        setSearch('');
-        setTypeFilter('All');
-        setStatusFilter('All');
-        setMechanicFilter('All');
+        setSearch(''); setTypeFilter('All'); setStatusFilter('All'); setMechanicFilter('All');
     };
 
-    // Filters mapping
     const filteredRecords = useMemo(() => {
         return records.filter(r => {
-            const matchVehicle = r.vehicle.toLowerCase().includes(search.toLowerCase()) ||
-                r.id.toLowerCase().includes(search.toLowerCase());
-            const matchType = typeFilter === 'All' || r.maintenanceType === typeFilter;
-            const matchStatus = statusFilter === 'All' || r.status === statusFilter;
+            const matchVehicle  = r.vehicleReg?.toLowerCase().includes(search.toLowerCase()) ||
+                String(r.id).toLowerCase().includes(search.toLowerCase());
+            const matchType     = typeFilter === 'All' || r.maintenanceType === typeFilter;
+            const matchStatus   = statusFilter === 'All' || r.rawStatus === statusFilter;
             const matchMechanic = mechanicFilter === 'All' || r.mechanic === mechanicFilter;
             return matchVehicle && matchType && matchStatus && matchMechanic;
         });
     }, [records, search, typeFilter, statusFilter, mechanicFilter]);
+
+
 
     return (
         <div className="maintenance-page">

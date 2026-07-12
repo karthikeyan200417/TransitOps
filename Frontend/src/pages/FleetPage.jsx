@@ -1,13 +1,42 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     MdDirectionsBus, MdLocalShipping, MdAirportShuttle, MdLocalTaxi,
     MdAdd, MdRefresh, MdDownload, MdSearch, MdEdit, MdDelete, MdVisibility,
     MdClose, MdCheckCircle, MdWarning, MdBuild, MdBlock,
     MdArrowBack, MdArrowForward, MdFilterList, MdSort
 } from 'react-icons/md';
-import { mockVehicles, vehicleTypes, statusOptions, fuelTypes, sortOptions } from '../data/fleetMockData';
+import { vehiclesApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import './FleetPage.css';
+
+const vehicleTypes  = ['All', 'Van', 'Truck', 'Bus', 'Mini', 'Heavy', 'Tanker', 'Pickup'];
+const statusOptions = ['All', 'AVAILABLE', 'ON_TRIP', 'IN_SHOP', 'RETIRED'];
+const fuelTypes     = ['Diesel', 'Petrol', 'CNG', 'Electric', 'Hybrid'];
+const sortOptions   = [
+    { value: 'newest',   label: 'Newest First' },
+    { value: 'oldest',   label: 'Oldest First' },
+    { value: 'capacity', label: 'By Capacity' },
+    { value: 'status',   label: 'By Status' },
+];
+
+// Map backend vehicle fields to UI-friendly shape
+function toUI(v) {
+    return {
+        id: v.id,
+        regNumber: v.registration_number,
+        vehicleName: v.name_model,
+        model: v.name_model,
+        vehicleType: v.type,
+        capacity: parseFloat(v.capacity_kg),
+        odometer: parseFloat(v.odometer),
+        acquisitionCost: parseFloat(v.acquisition_cost),
+        status: v.status.charAt(0) + v.status.slice(1).toLowerCase().replace('_', ' '),
+        rawStatus: v.status,
+        fuelType: 'Diesel',
+        purchaseDate: '', color: '', insuranceNumber: '',
+        insuranceExpiry: '', registrationExpiry: '', notes: '',
+    };
+}
 
 /* ─── Status Badge ─── */
 function StatusBadge({ status }) {
@@ -211,61 +240,93 @@ function Pagination({ page, totalPages, onPrev, onNext }) {
 const PAGE_SIZE = 8;
 
 export default function FleetPage() {
-    const [vehicles, setVehicles] = useState(mockVehicles);
-    const [search, setSearch] = useState('');
-    const [typeFilter, setTypeFilter] = useState('All');
+    const [vehicles, setVehicles] = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [apiError, setApiError] = useState(null);
+    const [search, setSearch]       = useState('');
+    const [typeFilter, setTypeFilter]     = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
-    const [page, setPage] = useState(1);
+    const [page, setPage]     = useState(1);
 
-    const [showAdd, setShowAdd] = useState(false);
+    const [showAdd, setShowAdd]         = useState(false);
     const [editVehicle, setEditVehicle] = useState(null);
     const [viewVehicle, setViewVehicle] = useState(null);
     const [deleteVehicle, setDeleteVehicle] = useState(null);
+
+    const fetchVehicles = async () => {
+        try {
+            setLoading(true);
+            const data = await vehiclesApi.list();
+            setVehicles(data.map(toUI));
+        } catch (e) { setApiError(e.message); }
+        finally { setLoading(false); }
+    };
+    useEffect(() => { fetchVehicles(); }, []);
 
     /* Filter + Sort */
     const filtered = useMemo(() => {
         let list = vehicles.filter(v => {
             const matchSearch = !search || v.regNumber.toLowerCase().includes(search.toLowerCase()) || v.vehicleName.toLowerCase().includes(search.toLowerCase());
-            const matchType = typeFilter === 'All' || v.vehicleType === typeFilter;
-            const matchStatus = statusFilter === 'All' || v.status === statusFilter;
+            const matchType   = typeFilter === 'All' || v.vehicleType === typeFilter;
+            const matchStatus = statusFilter === 'All' || v.rawStatus === statusFilter;
             return matchSearch && matchType && matchStatus;
         });
         switch (sortBy) {
-            case 'oldest': list = [...list].sort((a, b) => a.id - b.id); break;
-            case 'newest': list = [...list].sort((a, b) => b.id - a.id); break;
+            case 'oldest':   list = [...list].sort((a, b) => a.regNumber.localeCompare(b.regNumber)); break;
+            case 'newest':   list = [...list].sort((a, b) => b.regNumber.localeCompare(a.regNumber)); break;
             case 'capacity': list = [...list].sort((a, b) => b.capacity - a.capacity); break;
-            case 'status': list = [...list].sort((a, b) => a.status.localeCompare(b.status)); break;
+            case 'status':   list = [...list].sort((a, b) => a.status.localeCompare(b.status)); break;
             default: break;
         }
         return list;
     }, [vehicles, search, typeFilter, statusFilter, sortBy]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
     /* Actions */
-    const handleAdd = (form) => {
-        const newV = { ...form, id: Date.now(), capacity: +form.capacity, odometer: +form.odometer, acquisitionCost: +form.acquisitionCost };
-        setVehicles(v => [newV, ...v]);
-        setShowAdd(false);
-        setPage(1);
+    const handleAdd = async (form) => {
+        try {
+            await vehiclesApi.create({
+                registration_number: form.regNumber,
+                name_model: form.vehicleName,
+                type: form.vehicleType,
+                capacity_kg: parseFloat(form.capacity),
+                odometer: parseFloat(form.odometer) || 0,
+                acquisition_cost: parseFloat(form.acquisitionCost),
+                status: form.status || 'AVAILABLE',
+            });
+            setShowAdd(false); setPage(1);
+            fetchVehicles();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleEdit = (form) => {
-        setVehicles(v => v.map(x => x.id === editVehicle.id ? { ...x, ...form, capacity: +form.capacity, odometer: +form.odometer, acquisitionCost: +form.acquisitionCost } : x));
-        setEditVehicle(null);
+    const handleEdit = async (form) => {
+        try {
+            await vehiclesApi.update(editVehicle.id, {
+                name_model: form.vehicleName,
+                type: form.vehicleType,
+                capacity_kg: parseFloat(form.capacity),
+                odometer: parseFloat(form.odometer),
+                acquisition_cost: parseFloat(form.acquisitionCost),
+                status: form.status,
+            });
+            setEditVehicle(null);
+            fetchVehicles();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleDelete = () => {
-        setVehicles(v => v.filter(x => x.id !== deleteVehicle.id));
-        setDeleteVehicle(null);
-        if (paginated.length === 1 && page > 1) setPage(p => p - 1);
+    const handleDelete = async () => {
+        try {
+            await vehiclesApi.delete(deleteVehicle.id);
+            setDeleteVehicle(null);
+            if (paginated.length === 1 && page > 1) setPage(p => p - 1);
+            fetchVehicles();
+        } catch (e) { alert('Error: ' + e.message); }
     };
 
-    const handleRefresh = () => {
-        setSearch(''); setTypeFilter('All'); setStatusFilter('All'); setSortBy('newest'); setPage(1);
-    };
+    const handleRefresh = () => { fetchVehicles(); setSearch(''); setTypeFilter('All'); setStatusFilter('All'); setSortBy('newest'); setPage(1); };
 
     const handleExport = () => {
         const headers = ['Reg#', 'Name', 'Model', 'Type', 'Capacity', 'Odometer', 'Cost', 'Purchase Date', 'Color', 'Fuel', 'Insurance#', 'Ins. Expiry', 'Reg. Expiry', 'Status', 'Notes'];
