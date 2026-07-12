@@ -8,4 +8,3 @@ from app.models.fuel import FuelLog
 from app.models.expense import Expense
 from app.models.audit_log import AuditLog
 from app.models.features import VehicleFeature, DriverFeature, TripFeature
-
