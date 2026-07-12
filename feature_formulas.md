@@ -99,21 +99,3 @@ underlying aggregates.
 
 ---
 
-## 5. Constants (tune before demo)
-
-| Constant | Value used | Meaning |
-|---|---|---|
-| `RATE_PER_KM` | ₹15.0 | Assumed revenue per km driven — used to estimate revenue since no revenue column exists in the schema |
-| `MAINT_DUE_DAYS` | 180 | Days since last service before a vehicle is flagged "due soon" |
-| `MAINT_DUE_KM` | 8,000 | Km since last service before a vehicle is flagged "due soon" |
-| Anomaly z-score threshold | 2.0 | Standard deviations from a vehicle's own mean fuel efficiency before a fill is flagged anomalous |
-| License risk cutoffs | 14 / 60 days | Critical / Warning / Safe boundaries for `license_risk_bucket` |
-| Risk score weights | 0.4 / 0.4 / 0.2 | Weighting of safety score, completion rate, and cancellation rate in `composite_risk_score` |
-
----
-
-## Notes on design choices
-
-- **No stored derived columns.** Every feature above is computed at read time from raw data already in the six tables — this means features never go stale and there's nothing to keep in sync when new trips/logs are added.
-- **`fuel_efficiency_std` is a genuine per-fill estimate**, not a placeholder — it's derived by summing trip distance between consecutive fuel-log dates for the same vehicle, divided by liters used at that fill.
-- **`roi_pct` depends on an assumed revenue rate** (`RATE_PER_KM`) because the schema has no revenue/billing column. If a real per-trip revenue figure becomes available, replace `estimated_revenue` with the real value and the rest of the formula is unchanged.
