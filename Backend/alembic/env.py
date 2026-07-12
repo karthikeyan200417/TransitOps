@@ -8,29 +8,20 @@ from sqlalchemy import pool
 from alembic import context
 
 # 1. ADD BACKEND APP PATH TO SYSTEM PATH
-# This ensures Python can resolve "from app.core..." imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Import our settings and database metadata
 from app.core.config import settings
 from app.core.database import Base
+import app.models  # IMPORT MODELS TO REGISTER THEM ON BASE.METADATA
 
-# 2. CONFIGURE ALEMBIC LOGGING
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 3. SET TARGET METADATA
-# This registers our tables for autogenerate detection
 target_metadata = Base.metadata
-
-# 4. OVERRIDE DATABASE URL DYNAMICALLY
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-    This configures the context with just a URL and not an Engine.
-    """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -43,9 +34,6 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-    In this scenario we need to create an Engine and associate a connection with the context.
-    """
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
