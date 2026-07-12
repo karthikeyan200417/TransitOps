@@ -1,26 +1,24 @@
 import React, { useState } from 'react';
-import { MdSearch, MdNotifications } from 'react-icons/md';
+import { MdSearch } from 'react-icons/md';
 import StaggeredMenu from './StaggeredMenu';
 import './Navbar.css';
 
+// Nav items with page keys for routing
 const navItems = [
-    { label: 'Dashboard', ariaLabel: 'Go to Dashboard', link: '#dashboard' },
-    { label: 'Fleet', ariaLabel: 'Go to Fleet', link: '#fleet' },
-    { label: 'Drivers', ariaLabel: 'Go to Drivers', link: '#drivers' },
-    { label: 'Trips', ariaLabel: 'Go to Trips', link: '#trips' },
-    { label: 'Maintenance', ariaLabel: 'Go to Maintenance', link: '#maintenance' },
-    { label: 'Fuel', ariaLabel: 'Go to Fuel & Expenses', link: '#fuel' },
-    { label: 'Analytics', ariaLabel: 'Go to Analytics', link: '#analytics' },
-    { label: 'Settings', ariaLabel: 'Go to Settings', link: '#settings' },
+    { label: 'Dashboard', ariaLabel: 'Go to Dashboard', link: '#', 'data-page': 'dashboard' },
+    { label: 'Fleet', ariaLabel: 'Go to Fleet', link: '#', 'data-page': 'fleet' },
+    { label: 'Drivers', ariaLabel: 'Go to Drivers', link: '#' },
+    { label: 'Trips', ariaLabel: 'Go to Trips', link: '#' },
+    { label: 'Maintenance', ariaLabel: 'Go to Maintenance', link: '#' },
+    { label: 'Fuel', ariaLabel: 'Go to Fuel & Expenses', link: '#' },
+    { label: 'Analytics', ariaLabel: 'Go to Analytics', link: '#' },
+    { label: 'Settings', ariaLabel: 'Go to Settings', link: '#' },
 ];
 
-export default function Navbar({ onMenuToggle }) {
-    const [notifCount] = useState(3);
-
+export default function Navbar({ onNavigate }) {
     return (
         <header className="navbar">
             <div className="navbar-left">
-                {/* StaggeredMenu replaces the old hamburger */}
                 <div className="staggered-nav-wrap">
                     <StaggeredMenu
                         position="left"
@@ -33,6 +31,7 @@ export default function Navbar({ onMenuToggle }) {
                         colors={['#1a0f2e', '#6D4AFF']}
                         accentColor="#6D4AFF"
                         isFixed={true}
+                        onNavigate={onNavigate}
                     />
                 </div>
                 <div className="search-bar">
@@ -42,11 +41,6 @@ export default function Navbar({ onMenuToggle }) {
             </div>
 
             <div className="navbar-right">
-                <div className="notif-btn">
-                    <MdNotifications />
-                    {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
-                </div>
-
                 <div className="user-section">
                     <div className="user-info">
                         <span className="user-name">Raven K.</span>

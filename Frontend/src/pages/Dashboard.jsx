@@ -9,17 +9,16 @@ import ActivityTimeline from '../components/ActivityTimeline';
 import { kpiData } from '../data/dashboardData';
 import './Dashboard.css';
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
     return (
         <div className="dashboard-layout">
             <div className="dashboard-main">
-                <Navbar />
+                <Navbar onNavigate={onNavigate} />
 
                 <div className="dashboard-content">
                     <div className="page-header">
                         <div>
                             <h1 className="page-title">Dashboard</h1>
-                            <p className="page-subtitle">Welcome back, Raven. Here's your fleet at a glance.</p>
                         </div>
                     </div>
 

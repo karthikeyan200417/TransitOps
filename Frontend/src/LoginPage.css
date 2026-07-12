@@ -5,9 +5,9 @@ body {
     margin: 0;
     padding: 0;
     width: 100vw;
-    height: 100vh;
+    min-height: 100vh;
     font-family: 'Inter', sans-serif;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 .login-container {

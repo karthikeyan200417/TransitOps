@@ -28,7 +28,9 @@
 
 .staggered-nav-wrap .staggered-menu-header {
     padding: 0;
-    position: relative;
+    position: absolute;
+    top: 12px;
+    left: 28px;
     justify-content: flex-start;
     height: 40px;
     align-items: center;
