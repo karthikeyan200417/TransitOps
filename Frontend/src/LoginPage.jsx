@@ -6,16 +6,20 @@ import RotatingText from './RotatingText';
 import { AuthContext } from './context/AuthContext';
 
 export default function LoginPage({ onLogin }) {
-    const { login } = useContext(AuthContext);
-    const [email, setEmail] = useState('Raven.k@transitops.in');
-    const [password, setPassword] = useState('********');
-    const [role, setRole] = useState('Dispatcher');
-    const [isSignUp, setIsSignUp] = useState(false);
+    const { login, loading } = useContext(AuthContext);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        login(email, role);
-        if (onLogin) onLogin();
+        setError('');
+        try {
+            await login(email, password);
+            if (onLogin) onLogin();
+        } catch (err) {
+            setError(err.message || 'Invalid email or password.');
+        }
     };
 
     return (
@@ -65,49 +69,55 @@ export default function LoginPage({ onLogin }) {
 
             {/* Login form */}
             <div className="login-form-container">
-                <h2 className="form-title">{isSignUp ? "Create an account" : "Sign in to your account"}</h2>
-                <p className="form-subtitle">{isSignUp ? "Enter your details to register" : "Enter your credentials to continue"}</p>
+                <h2 className="form-title">Sign in to your account</h2>
+                <p className="form-subtitle">Enter your credentials to continue</p>
+
+                {error && (
+                    <div style={{
+                        background: 'rgba(255,107,107,0.12)',
+                        border: '1px solid #FF6B6B55',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        color: '#FF6B6B',
+                        fontSize: '13px',
+                        marginBottom: '12px'
+                    }}>
+                        {error}
+                    </div>
+                )}
 
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label>EMAIL</label>
-                        <input type="email" placeholder="Raven.k@transitops.in" value={email} onChange={e => setEmail(e.target.value)} required />
+                        <input
+                            type="email"
+                            placeholder="dispatcher@transitops.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                        />
                     </div>
 
                     <div className="input-group">
                         <label>PASSWORD</label>
-                        <input type="password" placeholder="********" value={password} onChange={e => setPassword(e.target.value)} required />
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            required
+                        />
                     </div>
 
-                    {isSignUp && (
-                        <div className="input-group">
-                            <label>CONFIRM PASSWORD</label>
-                            <input type="password" placeholder="********" required />
-                        </div>
-                    )}
-
-                    <div className="input-group">
-                        <label>ROLE (RBAC)</label>
-                        <select value={role} onChange={e => setRole(e.target.value)}>
-                            <option value="Fleet Manager">Fleet Manager</option>
-                            <option value="Dispatcher">Dispatcher</option>
-                            <option value="Safety Officer">Safety Officer</option>
-                            <option value="Financial Analyst">Financial Analyst</option>
-                        </select>
+                    <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                        Demo accounts: admin@transitops.com / admin123 &nbsp;|&nbsp;
+                        dispatcher@transitops.com / dispatcher123
                     </div>
 
                     <div className="button-group">
-                        {isSignUp ? (
-                            <>
-                                <button type="submit" className="submit-btn">Sign Up</button>
-                                <button type="button" className="secondary-btn" onClick={() => setIsSignUp(false)}>Back to Sign In</button>
-                            </>
-                        ) : (
-                            <>
-                                <button type="submit" className="submit-btn">Sign In</button>
-                                <button type="button" className="secondary-btn" onClick={() => setIsSignUp(true)}>Sign Up</button>
-                            </>
-                        )}
+                        <button type="submit" className="submit-btn" disabled={loading}>
+                            {loading ? 'Signing in…' : 'Sign In'}
+                        </button>
                     </div>
                 </form>
             </div>

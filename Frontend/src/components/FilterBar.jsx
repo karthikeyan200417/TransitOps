@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { MdFilterList } from 'react-icons/md';
-import { filterOptions } from '../data/dashboardData';
 import './FilterBar.css';
+
+const filterOptions = {
+    vehicleType: ['All', 'Van', 'Truck', 'Bus', 'Mini', 'Heavy'],
+    status:      ['All', 'Available', 'On Trip', 'In Shop', 'Retired'],
+    region:      ['All', 'North', 'South', 'East', 'West'],
+};
+
 
 export default function FilterBar() {
     const [vehicleType, setVehicleType] = useState('All');

@@ -1,21 +1,26 @@
 import React from 'react';
-import { fuelChartData, tripStatusPie } from '../data/dashboardData';
 import './ChartsSection.css';
 
 // Simple SVG bar chart for fuel consumption
-function FuelBarChart() {
-    const max = Math.max(...fuelChartData.map(d => d.liters));
+function FuelBarChart({ data = [] }) {
+    if (!data || data.length === 0) return (
+        <div className="chart-card">
+            <h4 className="chart-title">Fuel Consumption (L)</h4>
+            <div style={{ color: '#666', padding: '30px', textAlign: 'center', fontSize: '13px' }}>No fuel data yet.</div>
+        </div>
+    );
+    const max = Math.max(...data.map(d => d.liters || d.litres || 0), 1);
     const h = 100;
     return (
         <div className="chart-card">
             <h4 className="chart-title">Fuel Consumption (L)</h4>
             <div className="bar-chart">
-                {fuelChartData.map((d, i) => (
+                {data.map((d, i) => (
                     <div key={i} className="bar-col">
                         <div className="bar-wrap">
                             <div
                                 className="bar-fill"
-                                style={{ height: `${(d.liters / max) * h}%` }}
+                                style={{ height: `${((d.liters || d.litres || 0) / max) * h}%` }}
                             />
                         </div>
                         <span className="bar-label">{d.month}</span>
@@ -27,15 +32,15 @@ function FuelBarChart() {
 }
 
 // Simple SVG donut chart for trip status
-function TripStatusDonut() {
-    const total = tripStatusPie.reduce((s, d) => s + d.value, 0);
+function TripStatusDonut({ data = [] }) {
+    const total = data.reduce((s, d) => s + (d.value || 0), 0);
     const r = 40;
     const cx = 60, cy = 60;
     const circumference = 2 * Math.PI * r;
     let offset = 0;
 
-    const slices = tripStatusPie.map(d => {
-        const dash = (d.value / total) * circumference;
+    const slices = data.map(d => {
+        const dash = total > 0 ? (d.value / total) * circumference : 0;
         const gap = circumference - dash;
         const slice = { ...d, dash, gap, offset };
         offset += dash;
@@ -63,11 +68,11 @@ function TripStatusDonut() {
                     <text x={cx} y={cy + 5} textAnchor="middle" fill="#fff" fontSize="14" fontFamily="Inter" fontWeight="700">{total}</text>
                 </svg>
                 <div className="donut-legend">
-                    {tripStatusPie.map(d => (
+                    {data.map(d => (
                         <div key={d.label} className="legend-item">
                             <span className="legend-dot" style={{ background: d.color }} />
                             <span className="legend-label">{d.label}</span>
-                            <span className="legend-val">{d.value}%</span>
+                            <span className="legend-val">{d.value}</span>
                         </div>
                     ))}
                 </div>
@@ -77,11 +82,8 @@ function TripStatusDonut() {
 }
 
 // Fleet utilization simple gauge
-function FleetUtilGauge() {
-    const pct = 81;
-    const r = 40;
-    const circumference = Math.PI * r; // half circle
-    const dash = (pct / 100) * circumference;
+function FleetUtilGauge({ dash }) {
+    const pct = dash ? Math.round((dash.available_vehicles / dash.total_vehicles) * 100) : 0;
 
     return (
         <div className="chart-card">
@@ -111,18 +113,18 @@ function FleetUtilGauge() {
                     </defs>
                     <text x="70" y="68" textAnchor="middle" fill="#fff" fontSize="20" fontFamily="Inter" fontWeight="700">{pct}%</text>
                 </svg>
-                <p className="gauge-sub">of total fleet deployed this week</p>
+                <p className="gauge-sub">available vehicles in fleet</p>
             </div>
         </div>
     );
 }
 
-export default function ChartsSection() {
+export default function ChartsSection({ tripStatusPie = [], dash = null, fuelData = [] }) {
     return (
         <div className="charts-section">
-            <FleetUtilGauge />
-            <TripStatusDonut />
-            <FuelBarChart />
+            <FleetUtilGauge dash={dash} />
+            <TripStatusDonut data={tripStatusPie} />
+            <FuelBarChart data={fuelData} />
         </div>
     );
 }
